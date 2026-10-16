@@ -1,4 +1,5 @@
 using DevDialogue.Api.Models.Entities;
+using DevDialogue.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevDialogue.Api.Data;
@@ -9,9 +10,13 @@ public class AppDbContext : DbContext
     {
     }
 
+    // Нові таблиці
     public DbSet<User> Users => Set<User>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<QuestionBank> QuestionsBank => Set<QuestionBank>();
+
+    // Стара таблиця для старого контролера
+    public DbSet<Question> Questions => Set<Question>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +65,21 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasIndex(q => new { q.Direction, q.Level }).HasDatabaseName("idx_questions_direction_level");
+        });
+
+        // Мапінг старої таблиці з виключенням із міграцій
+        modelBuilder.Entity<Question>(e =>
+        {
+            e.ToTable("questions", "public", t => t.ExcludeFromMigrations());
+            e.Property(q => q.Id).HasColumnName("id");
+            e.Property(q => q.Content).HasColumnName("question_text");
+            e.Property(q => q.ExpectedAnswer).HasColumnName("answer_text");
+            e.Property(q => q.Category).HasColumnName("category");
+            e.Property(q => q.DifficultyLevel).HasColumnName("difficulty_level");
+            e.Property(q => q.Role).HasColumnName("role");
+            e.Property(q => q.Level).HasColumnName("level");
+            e.Property(q => q.Language).HasColumnName("language");
+            e.Property(q => q.Framework).HasColumnName("framework");
         });
     }
 }
