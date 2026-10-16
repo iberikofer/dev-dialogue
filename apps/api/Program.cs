@@ -9,6 +9,13 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Dynamic PORT binding for cloud container environments (Render / Railway / Docker)
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(renderPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
+}
+
 // ==========================================
 // 1. Database Configuration (PostgreSQL / In-Memory fallback)
 // ==========================================
