@@ -2,12 +2,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Копіюємо файл проєкту і відновлюємо залежності
-COPY ["DevDialogue.Api.csproj", "./"]
-RUN dotnet restore "DevDialogue.Api.csproj"
-
-# Копіюємо весь інший код і збираємо проєкт
+# Копіюємо весь монорепозиторій (щоб підтягнулися залежності з packages/api-contracts)
 COPY . .
+
+# Переходимо в папку нашого API
+WORKDIR /src/apps/api
+
+# Відновлюємо залежності та збираємо проєкт
+RUN dotnet restore "DevDialogue.Api.csproj"
 RUN dotnet publish "DevDialogue.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 # Етап виконання (використовуємо легкий ASP.NET Runtime)
