@@ -9,35 +9,61 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Dynamic PORT binding for cloud container environments (Render / Railway / Docker)
+// Optional local dev configuration override (gitignored)
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
+// Load .env if present (checks apps/api/.env and workspace root .env)
+var envCandidates = new[]
+{
+    Path.Combine(builder.Environment.ContentRootPath, ".env"),
+    Path.Combine(builder.Environment.ContentRootPath, "..", "..", ".env")
+};
+foreach (var envPath in envCandidates)
+{
+    if (File.Exists(envPath))
+    {
+        foreach (var line in File.ReadAllLines(envPath))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("#")) continue;
+            var parts = trimmed.Split('=', 2);
+            if (parts.Length == 2 && string.IsNullOrEmpty(Environment.GetEnvironmentVariable(parts[0].Trim())))
+            {
+                Environment.SetEnvironmentVariable(parts[0].Trim(), parts[1].Trim().Trim('"'));
+            }
+        }
+        break;
+    }
+}
+
+// Dynamic PORT binding for cloud container environments
 var renderPort = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(renderPort))
 {
     builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
 }
 
-// ==========================================
-// 1. Database Configuration (PostgreSQL / In-Memory fallback)
-// ==========================================
+// Database Configuration (PostgreSQL with in-memory fallback)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                     ?? Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    if (!string.IsNullOrWhiteSpace(connectionString) && !connectionString.Contains("YOUR_POSTGRES"))
+    var isPostgresConfigured = !string.IsNullOrWhiteSpace(connectionString)
+                            && (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
+                             || connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase));
+
+    if (isPostgresConfigured)
     {
         options.UseNpgsql(connectionString);
     }
     else
     {
-        // Graceful in-memory fallback for immediate zero-config local development
         options.UseInMemoryDatabase("DevDialogueDevDb");
     }
 });
 
-// ==========================================
-// 2. AI Service Registration (Cloud / Mock)
-// ==========================================
+// AI Service Registration (Cloud or Mock)
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Mock";
 var aiApiKey = builder.Configuration["AI:ApiKey"] ?? Environment.GetEnvironmentVariable("AI_API_KEY");
 
@@ -50,13 +76,10 @@ else
     builder.Services.AddSingleton<IAiService, MockAiService>();
 }
 
-// ==========================================
-// 3. Supabase JWT Authentication
-// ==========================================
+// Supabase JWT Authentication
 var jwtSecret = builder.Configuration["Supabase:JwtSecret"]
              ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET");
 
-// Fallback secret for local development/testing if not yet set in Supabase
 if (string.IsNullOrWhiteSpace(jwtSecret))
 {
     jwtSecret = "super-secret-dev-dialogue-local-jwt-token-key-2026-min-32-chars!";
@@ -85,9 +108,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// ==========================================
-// 4. CORS Policy (Next.js Frontend & Local Dev)
-// ==========================================
+// CORS Policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -104,9 +125,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ==========================================
-// 5. Controllers & Swagger Documentation
-// ==========================================
+// Controllers & Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -119,7 +138,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "AI Interview Simulator Backend API for Dev Dialogue"
     });
 
-    // JWT Bearer documentation for Swagger UI
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'",
@@ -147,9 +165,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ==========================================
-// 6. Middleware Pipeline
-// ==========================================
+// Middleware Pipeline
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -164,9 +180,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// ==========================================
-// 7. Seed Initial Data (if QuestionBank is empty)
-// ==========================================
+// Seed Initial Data (if QuestionBank is empty)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
