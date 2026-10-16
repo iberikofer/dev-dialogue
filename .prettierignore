@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+pnpm-lock.yaml
+bin/
+obj/
+.vs/
+.ai/
+.agents/
+*.min.js
+*.woff
+*.woff2

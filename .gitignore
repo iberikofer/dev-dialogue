@@ -1,0 +1,78 @@
+# Dependencies & Package Managers
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+*.tsbuildinfo
+
+# Next.js & Frontend Builds
+.next/
+out/
+build/
+dist/
+.cache/
+
+# Monorepo / Turborepo
+.turbo/
+
+# Vercel & Cloud Deployments
+.vercel/
+.render/
+
+# .NET Core / C# Backend (ASP.NET Core)
+[Bb]in/
+[Oo]bj/
+[Aa]pp_Data/
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Databases & Local Data
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+.supabase/
+
+# Testing & Code Coverage
+coverage/
+*.lcov
+test-results/
+playwright-report/
+blob-report/
+
+# IDE & Editor
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS Files
+Thumbs.db
+ehthumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Local AI Debug & Scratch Files (.ai folder rule)
+.ai/
+.agents/
+
+# OS / Misc
+*.local
