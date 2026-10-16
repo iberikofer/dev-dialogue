@@ -90,16 +90,14 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     setLoading(true);
 
     try {
-      const response = await api.interviews.submitAnswer(interviewId, {
-        answer: userText,
-      });
+      const response = await api.interviews.sendMessage(interviewId, userText);
 
-      if (response && response.aiReply) {
+      if (response && response.message) {
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: response.aiReply,
+            content: response.message,
             timestamp: new Date().toISOString(),
           },
         ]);
