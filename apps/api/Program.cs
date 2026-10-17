@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,25 +109,38 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// CORS Policy
+// ==========================================
+// 4. CORS Policy (Next.js Frontend & Local Dev)
+// ==========================================
+var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:3000",
-                "http://127.0.0.1:3000",
-                "https://*.vercel.app"
-              )
-              .SetIsOriginAllowedToAllowWildcardSubdomains()
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        policy.WithOrigins(allowedOrigins)
+            .SetIsOriginAllowed(origin => 
+            {
+                var host = new Uri(origin).Host;
+                return host == "localhost" || host.EndsWith(".vercel.app");
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
 // Controllers & Swagger
 builder.Services.AddControllers();
+
+// Перевизначення формату помилок валідації (ModelState)
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+        new BadRequestObjectResult(new { error = "Validation failed", code = "VALIDATION_ERROR" });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -165,13 +179,28 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Middleware Pipeline
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// ==========================================
+// 6. Middleware Pipeline
+// ==========================================
+app.UseExceptionHandler(errorApp =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Dev Dialogue API v1");
-    c.RoutePrefix = "swagger";
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { error = "Internal server error", code = "INTERNAL_ERROR" });
+    });
 });
+
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swagger:Enabled"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Dev Dialogue API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.UseCors("AllowFrontend");
 
