@@ -77,35 +77,41 @@ else
     builder.Services.AddSingleton<IAiService, MockAiService>();
 }
 
-// Supabase JWT Authentication
-var jwtSecret = builder.Configuration["Supabase:JwtSecret"]
-             ?? Environment.GetEnvironmentVariable("SUPABASE_JWT_SECRET");
+// ==========================================
+// 3. Supabase JWT Authentication
+// ==========================================
+var supabaseUrl = builder.Configuration["Supabase:Url"] 
+                  ?? Environment.GetEnvironmentVariable("SUPABASE_URL");
 
-if (string.IsNullOrWhiteSpace(jwtSecret))
+if (string.IsNullOrWhiteSpace(supabaseUrl))
 {
-    jwtSecret = "super-secret-dev-dialogue-local-jwt-token-key-2026-min-32-chars!";
+    throw new Exception("Supabase:Url is missing in configuration.");
 }
 
-var keyBytes = Encoding.UTF8.GetBytes(jwtSecret);
-
 builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+    
+        // Вказуємо ASP.NET автоматично підтягувати публічні ключі (JWKS) з Supabase
+        options.Authority = $"{supabaseUrl}/auth/v1";
+    
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = $"{supabaseUrl}/auth/v1",
+            ValidateAudience = true,
+            ValidAudience = "authenticated", // Стандартний Audience у Supabase
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
 builder.Services.AddAuthorization();
 
