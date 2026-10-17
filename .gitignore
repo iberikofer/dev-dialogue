@@ -33,6 +33,8 @@ dist/
 .env
 .env.*
 !.env.example
+appsettings.Local.json
+appsettings.*.local.json
 *.pem
 *.key
 *.cert

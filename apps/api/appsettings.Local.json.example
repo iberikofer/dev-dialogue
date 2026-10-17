@@ -1,0 +1,13 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=aws-0-eu-central-1.pooler.supabase.com;Port=6543;Database=postgres;Username=postgres.your-project-ref;Password=your-password"
+  },
+  "Supabase": {
+    "Url": "https://your-project.supabase.co",
+    "JwtSecret": "your-supabase-jwt-secret-from-api-settings"
+  },
+  "AI": {
+    "Provider": "Mock",
+    "ApiKey": "gsk_your_groq_key_if_using_cloud"
+  }
+}

@@ -1,12 +1,3 @@
-/**
- * Dev Dialogue — Unified API Contracts & Shared Domain Types
- * This package defines all shared contracts between the ASP.NET Core backend and Next.js frontend.
- */
-
-// ==========================================
-// 1. User & Authentication
-// ==========================================
-
 export type UserRole = 'user' | 'admin';
 
 export interface UserProfile {
@@ -28,10 +19,6 @@ export interface AuthMeResponse {
   role: UserRole;
 }
 
-// ==========================================
-// 2. Interview Domain Types
-// ==========================================
-
 export type InterviewDirection = 'frontend' | 'backend' | 'devops' | 'pm' | 'qa';
 export type InterviewLevel = 'trainee' | 'junior' | 'middle';
 export type InterviewLanguage = 'uk' | 'en';
@@ -46,7 +33,7 @@ export interface InterviewMessage {
 
 export interface QuestionScoreItem {
   question: string;
-  score: number; // 0 - 100
+  score: number;
   comment: string;
 }
 
@@ -57,7 +44,7 @@ export interface RecommendationItem {
 
 export interface InterviewFeedbackReport {
   summary: string;
-  score: number; // 0 - 100
+  score: number;
   strengths: string[];
   weaknesses: string[];
   recommendations: RecommendationItem[];
@@ -82,10 +69,6 @@ export interface InterviewDetail extends InterviewSummary {
   transcript: InterviewMessage[];
   feedback: InterviewFeedbackReport | null;
 }
-
-// ==========================================
-// 3. Interview Requests & Responses
-// ==========================================
 
 export interface CreateInterviewRequest {
   direction: InterviewDirection;
@@ -112,10 +95,6 @@ export interface CompleteInterviewResponse {
   score: number;
   feedback: InterviewFeedbackReport;
 }
-
-// ==========================================
-// 4. Question Bank (Admin & System)
-// ==========================================
 
 export interface QuestionBankItem {
   id: string;
@@ -145,10 +124,6 @@ export interface UpdateQuestionRequest {
   questionText?: string;
   isActive?: boolean;
 }
-
-// ==========================================
-// 5. Dashboard Stats
-// ==========================================
 
 export interface UserDashboardStats {
   totalInterviews: number;

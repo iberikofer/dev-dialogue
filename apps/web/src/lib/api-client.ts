@@ -91,6 +91,12 @@ export const api = {
         body: JSON.stringify({ content }),
       }),
 
+    submitAnswer: (id: string, payload: { answer: string }) =>
+      request<SendMessageResponse>(`/api/interviews/${id}/message`, {
+        method: 'POST',
+        body: JSON.stringify({ content: payload.answer }),
+      }),
+
     complete: (id: string) =>
       request<CompleteInterviewResponse>(`/api/interviews/${id}/complete`, {
         method: 'POST',
