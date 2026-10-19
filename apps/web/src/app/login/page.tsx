@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/lib/useTranslation';
 
 function LoginForm() {
   const router = useRouter();
@@ -26,6 +27,7 @@ function LoginForm() {
   const redirectPath = searchParams.get('redirect') || '/dashboard';
 
   const { user, mockLogin } = useAuthStore();
+  const { t, lang } = useTranslation();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,7 +67,9 @@ function LoginForm() {
 
     if (!isSupabaseConfigured()) {
       setError(
-        'Supabase не налаштовано локально (відсутній NEXT_PUBLIC_SUPABASE_URL). Використайте швидкий Демо-доступ нижче або вкажіть змінні у .env.'
+        lang === 'uk'
+          ? 'Supabase не налаштовано локально (відсутній NEXT_PUBLIC_SUPABASE_URL). Використайте швидкий Демо-доступ нижче або вкажіть змінні у .env.'
+          : 'Supabase is not configured locally (missing NEXT_PUBLIC_SUPABASE_URL). Please use the 1-click Demo mode below or provide .env variables.'
       );
       setGoogleLoading(false);
       return;
@@ -93,7 +97,12 @@ function LoginForm() {
       }
     } catch (err: unknown) {
       console.error('Google Auth Error:', err);
-      const msg = err instanceof Error ? err.message : 'Не вдалося ініціалізувати Google вхід';
+      const msg =
+        err instanceof Error
+          ? err.message
+          : lang === 'uk'
+            ? 'Не вдалося ініціалізувати Google вхід'
+            : 'Failed to initialize Google authentication';
       setError(msg);
       setGoogleLoading(false);
     }
@@ -107,22 +116,32 @@ function LoginForm() {
     setLoading(true);
 
     if (!email || !password) {
-      setError('Будь ласка, заповніть усі обовʼязкові поля.');
+      setError(
+        lang === 'uk'
+          ? 'Будь ласка, заповніть усі обовʼязкові поля.'
+          : 'Please fill in all required fields.'
+      );
       setLoading(false);
       return;
     }
 
     if (mode === 'signup' && !fullName) {
-      setError('Будь ласка, вкажіть ваше імʼя для реєстрації.');
+      setError(
+        lang === 'uk'
+          ? 'Будь ласка, вкажіть ваше імʼя для реєстрації.'
+          : 'Please provide your full name to sign up.'
+      );
       setLoading(false);
       return;
     }
 
     if (!isSupabaseConfigured()) {
-      // Local fallback simulation if Supabase is unconfigured
-      mockLogin('user');
-      setSuccessMessage('Успішний локальний вхід у демонстраційному режимі!');
-      setTimeout(() => router.push(redirectPath), 600);
+      // Offline fallback: simulate successful login
+      setTimeout(() => {
+        setLoading(false);
+        mockLogin('user');
+        router.push(redirectPath);
+      }, 700);
       return;
     }
 
@@ -134,20 +153,22 @@ function LoginForm() {
           options: {
             data: {
               full_name: fullName,
-              role: 'user',
+              role: 'candidate',
             },
           },
         });
 
         if (signUpError) throw signUpError;
 
-        if (data.session) {
-          setSuccessMessage('Акаунт успішно створено! Перенаправляємо...');
-          setTimeout(() => router.push(redirectPath), 800);
+        if (data?.session) {
+          router.push(redirectPath);
         } else {
           setSuccessMessage(
-            'Реєстрація успішна! Якщо на вашому Supabase увімкнено підтвердження email — перевірте поштову скриньку.'
+            lang === 'uk'
+              ? 'Акаунт успішно створено! Перевірте електронну пошту для підтвердження або увійдіть.'
+              : 'Account created successfully! Please check your email to confirm your account or sign in.'
           );
+          setMode('signin');
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -156,27 +177,28 @@ function LoginForm() {
         });
 
         if (signInError) throw signInError;
-
-        setSuccessMessage('Успішний вхід! Перенаправляємо...');
-        setTimeout(() => router.push(redirectPath), 600);
+        router.push(redirectPath);
       }
     } catch (err: unknown) {
-      console.error('Auth Error:', err);
+      console.error('Auth action failed:', err);
       const msg =
         err instanceof Error
           ? err.message
-          : 'Помилка авторизації. Перевірте правильність введених даних.';
+          : lang === 'uk'
+            ? 'Помилка авторизації. Спробуйте ще раз або використайте Демо-режим.'
+            : 'Authentication error. Please try again or use Demo mode.';
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Quick Demo Login Handler
   const handleQuickDemo = (role: 'admin' | 'user') => {
     mockLogin(role);
     setSuccessMessage(
-      `Активовано сесію ${role === 'admin' ? 'Адміністратора (Yaroslav)' : 'Кандидата'}!`
+      lang === 'uk'
+        ? `Ви успішно авторизовані як ${role === 'admin' ? 'Адміністратор' : 'Кандидат'} (Демо)! Перенаправлення...`
+        : `Signed in as ${role === 'admin' ? 'Administrator' : 'Candidate'} (Demo mode)! Redirecting...`
     );
     setTimeout(() => router.push(redirectPath), 400);
   };
@@ -222,12 +244,10 @@ function LoginForm() {
             </Link>
 
             <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
-              {mode === 'signin' ? 'Вхід у систему' : 'Створення акаунту'}
+              {mode === 'signin' ? t.auth.titleSignIn : t.auth.titleSignUp}
             </h1>
             <p className="mt-1.5 text-xs text-zinc-400">
-              {mode === 'signin'
-                ? 'Авторизуйтесь для збереження результатів симуляцій'
-                : 'Розпочніть тренування технічних інтервʼю з AI'}
+              {mode === 'signin' ? t.auth.subtitleSignIn : t.auth.subtitleSignUp}
             </p>
           </div>
 
@@ -246,7 +266,7 @@ function LoginForm() {
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Вхід (Sign In)
+              {lang === 'uk' ? 'Вхід (Sign In)' : 'Sign In'}
             </button>
             <button
               type="button"
@@ -261,7 +281,7 @@ function LoginForm() {
                   : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Реєстрація (Sign Up)
+              {lang === 'uk' ? 'Реєстрація (Sign Up)' : 'Sign Up'}
             </button>
           </div>
 
@@ -309,9 +329,7 @@ function LoginForm() {
                 />
               </svg>
             )}
-            <span>
-              {mode === 'signin' ? 'Продовжити через Google' : 'Зареєструватися через Google'}
-            </span>
+            <span>{t.auth.googleAuth}</span>
           </button>
 
           {/* Divider */}
@@ -320,7 +338,7 @@ function LoginForm() {
               <div className="w-full border-t border-white/[0.08]" />
             </div>
             <span className="relative bg-zinc-950 px-3 text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-              або через email
+              {t.auth.orEmail}
             </span>
           </div>
 
@@ -329,7 +347,7 @@ function LoginForm() {
             {mode === 'signup' && (
               <div>
                 <label className="block text-xs font-medium text-zinc-300 mb-1.5">
-                  Ім&apos;я / Псевдонім
+                  {t.auth.fullNameLabel}
                 </label>
                 <div className="relative">
                   <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -338,7 +356,7 @@ function LoginForm() {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Name / Nickname"
+                    placeholder={t.auth.fullNamePlaceholder}
                     className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/60 py-2.5 pl-10 pr-3.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-blue-500/60 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
                   />
                 </div>
@@ -346,7 +364,9 @@ function LoginForm() {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-zinc-300 mb-1.5">Email адреса</label>
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
+                {t.auth.emailLabel}
+              </label>
               <div className="relative">
                 <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
                 <input
@@ -354,7 +374,7 @@ function LoginForm() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="engineer@domain.com"
+                  placeholder={t.auth.emailPlaceholder}
                   className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/60 py-2.5 pl-10 pr-3.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-blue-500/60 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
                 />
               </div>
@@ -362,12 +382,9 @@ function LoginForm() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-medium text-zinc-300">Пароль</label>
-                {mode === 'signin' && (
-                  <span className="text-[11px] text-blue-400 hover:text-blue-300 cursor-pointer">
-                    Забули пароль?
-                  </span>
-                )}
+                <label className="block text-xs font-medium text-zinc-300">
+                  {t.auth.passwordLabel}
+                </label>
               </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
@@ -376,7 +393,7 @@ function LoginForm() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder={t.auth.passwordPlaceholder}
                   className="w-full rounded-xl border border-white/[0.08] bg-zinc-900/60 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:border-blue-500/60 focus:bg-zinc-900 focus:outline-none focus:ring-1 focus:ring-blue-500/40"
                 />
                 <button
@@ -398,7 +415,7 @@ function LoginForm() {
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
                 <>
-                  <span>{mode === 'signin' ? 'Sign In' : 'Sign Up'}</span>
+                  <span>{mode === 'signin' ? t.auth.submitSignIn : t.auth.submitSignUp}</span>
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
@@ -406,7 +423,7 @@ function LoginForm() {
 
             {mode === 'signin' ? (
               <p className="mt-4 text-center text-xs text-zinc-400">
-                no account?{' '}
+                {t.auth.noAccount}{' '}
                 <Link
                   href="/login?mode=signup"
                   onClick={(e) => {
@@ -418,12 +435,12 @@ function LoginForm() {
                   }}
                   className="font-semibold text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
                 >
-                  Sign Up!
+                  {t.auth.signUpLink}
                 </Link>
               </p>
             ) : (
               <p className="mt-4 text-center text-xs text-zinc-400">
-                Already have an account?{' '}
+                {t.auth.haveAccount}{' '}
                 <Link
                   href="/login?mode=signin"
                   onClick={(e) => {
@@ -435,37 +452,37 @@ function LoginForm() {
                   }}
                   className="font-semibold text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
                 >
-                  Sign In
+                  {t.auth.signInLink}
                 </Link>
               </p>
             )}
           </form>
 
-          {/* Quick Demo Access Bar (Guaranteed Offline / Testing reliability) */}
+          {/* Quick Demo Access Bar */}
           <div className="mt-8 pt-6 border-t border-white/[0.08]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3 text-blue-400" />
-                Швидкий тест (Демо-режим)
+                {lang === 'uk' ? 'Швидкий тест (Демо-режим)' : 'Quick Test (Demo Mode)'}
               </span>
-              <span className="text-[10px] text-zinc-400">1 клік</span>
+              <span className="text-[10px] text-zinc-400 font-mono">1 click</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickDemo('admin')}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-950/30 px-3 py-2 text-xs font-medium text-blue-300 hover:bg-blue-900/40 hover:text-blue-200 transition-colors"
+                className="btn-tactile flex items-center justify-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-950/30 px-3 py-2 text-xs font-medium text-blue-300 hover:bg-blue-900/40 hover:text-blue-200 transition-colors"
               >
                 <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
-                <span>Як Адмін</span>
+                <span>{lang === 'uk' ? 'Як Адмін' : 'As Admin'}</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickDemo('user')}
-                className="flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-zinc-900/70 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
+                className="btn-tactile flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-zinc-900/70 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors"
               >
                 <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Як Кандидат</span>
+                <span>{lang === 'uk' ? 'Як Кандидат' : 'As Candidate'}</span>
               </button>
             </div>
           </div>
@@ -480,7 +497,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#09090b] text-zinc-400 text-sm">
-          Завантаження форми авторизації...
+          Loading...
         </div>
       }
     >

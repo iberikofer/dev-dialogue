@@ -6,9 +6,11 @@ import { History, TrendingUp, Clock, PlusCircle, ExternalLink } from 'lucide-rea
 import { InterviewSummary, UserDashboardStats } from '@dev-dialogue/api-contracts';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/lib/useTranslation';
 
 export const DashboardView: React.FC = () => {
   const { user } = useAuthStore();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UserDashboardStats>({
     totalInterviews: 0,
@@ -79,18 +81,16 @@ export const DashboardView: React.FC = () => {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-white/[0.08] pb-6 mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
-            Вітаємо, {user?.fullName || 'Кандидате'} 👋
+            {t.dashboard.welcome} {user?.fullName || t.dashboard.candidateDefault} 👋
           </h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Ваш персональний центр підготовки до технічних співбесід.
-          </p>
+          <p className="mt-1 text-sm text-zinc-400">{t.dashboard.subtitle}</p>
         </div>
         <Link
           href="/interview/setup"
           className="btn-tactile inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 border border-blue-400/30"
         >
           <PlusCircle className="h-4 w-4" />
-          <span>Почати нову співбесіду</span>
+          <span>{t.dashboard.startNew}</span>
         </Link>
       </div>
 
@@ -100,7 +100,7 @@ export const DashboardView: React.FC = () => {
         <div className="card-interactive rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5">
           <div className="flex items-center justify-between text-zinc-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider font-mono">
-              Пройдено співбесід
+              {t.dashboard.kpiPassed}
             </span>
             <History className="h-4 w-4 text-blue-400" />
           </div>
@@ -111,14 +111,14 @@ export const DashboardView: React.FC = () => {
               {stats.totalInterviews}
             </div>
           )}
-          <div className="mt-1 text-xs text-zinc-500">Загальна кількість сесій</div>
+          <div className="mt-1 text-xs text-zinc-500">{t.dashboard.kpiPassedDesc}</div>
         </div>
 
         {/* Average Score */}
         <div className="card-interactive rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5">
           <div className="flex items-center justify-between text-zinc-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider font-mono">
-              Середній бал
+              {t.dashboard.kpiScore}
             </span>
             <TrendingUp className="h-4 w-4 text-emerald-400" />
           </div>
@@ -129,14 +129,14 @@ export const DashboardView: React.FC = () => {
               {stats.averageScore ? `${stats.averageScore}%` : '—'}
             </div>
           )}
-          <div className="mt-1 text-xs text-zinc-500">Оцінка знань алгоритмами AI</div>
+          <div className="mt-1 text-xs text-zinc-500">{t.dashboard.kpiScoreDesc}</div>
         </div>
 
         {/* Daily Quota */}
         <div className="card-interactive rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-5">
           <div className="flex items-center justify-between text-zinc-400 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider font-mono">
-              Денний ліміт
+              {t.dashboard.kpiLimit}
             </span>
             <Clock className="h-4 w-4 text-blue-400" />
           </div>
@@ -148,19 +148,19 @@ export const DashboardView: React.FC = () => {
               <span className="text-sm font-normal text-zinc-500">/ {stats.dailyLimit}</span>
             </div>
           )}
-          <div className="mt-1 text-xs text-zinc-500">Залишилось спроб сьогодні</div>
+          <div className="mt-1 text-xs text-zinc-500">{t.dashboard.kpiLimitDesc}</div>
         </div>
       </div>
 
       {/* Sessions History Table */}
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/40 overflow-hidden shadow-lg">
         <div className="border-b border-white/[0.08] px-6 py-4 flex items-center justify-between">
-          <h2 className="font-bold text-zinc-100 text-base">Історія співбесід</h2>
+          <h2 className="font-bold text-zinc-100 text-base">{t.dashboard.historyTitle}</h2>
           <span className="text-xs text-zinc-400 font-mono">
             {loading ? (
               <span className="inline-block h-3 w-12 bg-zinc-800/80 rounded animate-pulse" />
             ) : (
-              `Всього: ${interviews.length}`
+              `${t.dashboard.totalPrefix} ${interviews.length}`
             )}
           </span>
         </div>
@@ -181,21 +181,18 @@ export const DashboardView: React.FC = () => {
             ))}
           </div>
         ) : interviews.length === 0 ? (
-          <div className="p-8 text-center text-zinc-400 text-sm">
-            У вас ще немає завершених співбесід. Натисніть &quot;Почати нову співбесіду&quot;, щоб
-            спробувати свої сили!
-          </div>
+          <div className="p-8 text-center text-zinc-400 text-sm">{t.dashboard.emptyHistory}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-zinc-300">
               <thead className="bg-zinc-950/60 text-xs font-semibold uppercase tracking-wider text-zinc-400 border-b border-white/[0.08]">
                 <tr>
-                  <th className="px-6 py-3">Дата</th>
-                  <th className="px-6 py-3">Напрямок</th>
-                  <th className="px-6 py-3">Рівень</th>
-                  <th className="px-6 py-3">Статус</th>
-                  <th className="px-6 py-3">Оцінка</th>
-                  <th className="px-6 py-3 text-right">Звіт</th>
+                  <th className="px-6 py-3">{t.dashboard.tableDate}</th>
+                  <th className="px-6 py-3">{t.dashboard.tableDirection}</th>
+                  <th className="px-6 py-3">{t.dashboard.tableLevel}</th>
+                  <th className="px-6 py-3">{t.dashboard.tableStatus}</th>
+                  <th className="px-6 py-3">{t.dashboard.tableScore}</th>
+                  <th className="px-6 py-3 text-right">{t.dashboard.tableReport}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.06]">
@@ -223,7 +220,9 @@ export const DashboardView: React.FC = () => {
                             : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                         }`}
                       >
-                        {item.status === 'completed' ? 'Завершено' : 'Активна'}
+                        {item.status === 'completed'
+                          ? t.dashboard.statusCompleted
+                          : t.dashboard.statusActive}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-bold text-zinc-100 font-mono">
@@ -234,7 +233,7 @@ export const DashboardView: React.FC = () => {
                         href={`/interview/${item.id}/report`}
                         className="btn-tactile inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300"
                       >
-                        <span>Переглянути</span>
+                        <span>{t.dashboard.viewReport}</span>
                         <ExternalLink className="h-3 w-3" />
                       </Link>
                     </td>

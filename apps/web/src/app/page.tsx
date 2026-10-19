@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
+import { useTranslation } from '@/lib/useTranslation';
 
 interface PreviewTrack {
   id: string;
@@ -23,13 +24,12 @@ interface PreviewTrack {
   role: string;
   level: string;
   question: string;
-  codeSnippet?: string;
   candidateAnswer: string;
   feedbackScore: number;
   highlight: string;
 }
 
-const PREVIEW_TRACKS: PreviewTrack[] = [
+const PREVIEW_TRACKS_UK: PreviewTrack[] = [
   {
     id: 'frontend',
     name: 'Frontend',
@@ -68,8 +68,50 @@ const PREVIEW_TRACKS: PreviewTrack[] = [
   },
 ];
 
+const PREVIEW_TRACKS_EN: PreviewTrack[] = [
+  {
+    id: 'frontend',
+    name: 'Frontend',
+    role: 'React / Next.js',
+    level: 'Junior+',
+    question:
+      'How does Reconciliation work in React, and why should you avoid using array index as a key for dynamic lists?',
+    candidateAnswer:
+      'React relies on Virtual DOM diffing. If you use an array index as a key during element deletion or sorting, component state (input focus, local state) will attach to the wrong DOM node.',
+    feedbackScore: 94,
+    highlight: 'Deep understanding of fiber architecture and reconciliation algorithm.',
+  },
+  {
+    id: 'backend',
+    name: 'Backend',
+    role: 'C# .NET 9 / EF Core',
+    level: 'Junior/Middle',
+    question:
+      'Explain the difference between AsNoTracking() and standard queries in Entity Framework Core. When is this critical?',
+    candidateAnswer:
+      'AsNoTracking disables the Change Tracker within the DbContext. This saves memory and significantly speeds up read-only queries, but prevents subsequent SaveChanges without manual entity attachment.',
+    feedbackScore: 91,
+    highlight: 'Accurate evaluation of memory footprints and query optimization scenarios.',
+  },
+  {
+    id: 'devops',
+    name: 'DevOps',
+    role: 'Docker / CI/CD',
+    level: 'Junior',
+    question: 'Why are Multi-stage builds recommended in Dockerfiles for production releases?',
+    candidateAnswer:
+      'To decouple the heavy build/compiler SDK from the runtime environment. Only the compiled binaries make it into the final image, shrinking container footprint from 800MB to 90MB while eliminating build-tool security vulnerabilities.',
+    feedbackScore: 96,
+    highlight: 'Excellent reasoning regarding container security and attack surface reduction.',
+  },
+];
+
 export default function Home() {
-  const [activeTrack, setActiveTrack] = useState<PreviewTrack>(PREVIEW_TRACKS[0]);
+  const { t, lang } = useTranslation();
+  const tracks = lang === 'en' ? PREVIEW_TRACKS_EN : PREVIEW_TRACKS_UK;
+  const [selectedTrackId, setSelectedTrackId] = useState<string>('frontend');
+
+  const activeTrack = tracks.find((track) => track.id === selectedTrackId) || tracks[0];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100 selection:bg-blue-500/25 selection:text-blue-200">
@@ -93,25 +135,23 @@ export default function Home() {
             <span className="flex h-2 w-2 rounded-full bg-blue-400">
               <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping opacity-75" />
             </span>
-            <span>Олімпіада ВНТУ ІПЗ ФІТКІ 2026</span>
+            <span>{t.home.olympiadBadge}</span>
             <span className="text-blue-400/50">•</span>
-            <span className="font-mono text-[11px] text-blue-300">Live AI Simulator</span>
+            <span className="font-mono text-[11px] text-blue-300">{t.home.liveBadge}</span>
           </div>
         </div>
 
         {/* Hero Headline & Subtitle */}
         <div className="mt-8 text-center max-w-3xl mx-auto animate-fade-in-up">
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-[-0.035em] text-zinc-100 leading-[1.08]">
-            Симулятор технічних співбесід з адаптивним{' '}
+            {t.home.heroTitle}{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400">
-              AI-інтерв&apos;юером
+              {t.home.heroTitleAccent}
             </span>
           </h1>
 
           <p className="mt-6 text-base sm:text-lg text-zinc-300/90 leading-relaxed max-w-2xl mx-auto font-normal">
-            Платформа для тренування реальних технічних інтерв&apos;ю. AI динамічно ставить
-            уточнюючі запитання, тестує глибину розуміння концепцій та формує детальний інженерний
-            звіт.
+            {t.home.heroSubtitle}
           </p>
 
           {/* Primary Action Buttons */}
@@ -121,7 +161,7 @@ export default function Home() {
               className="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 border border-blue-400/30"
             >
               <Sparkles className="h-4 w-4 text-blue-100" />
-              <span>Почати співбесіду</span>
+              <span>{t.home.startInterview}</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
 
@@ -129,13 +169,13 @@ export default function Home() {
               href="/dashboard"
               className="btn-tactile inline-flex items-center gap-2 rounded-xl border border-white/[0.12] bg-zinc-900/80 px-5 py-3.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-white/[0.22] hover:text-white"
             >
-              <span>Переглянути дашборд</span>
+              <span>{t.home.viewDashboard}</span>
               <ChevronRight className="h-4 w-4 text-zinc-400" />
             </Link>
           </div>
         </div>
 
-        {/* Interactive Live Simulation Terminal (Taste & Anthropic Show, Don't Tell) */}
+        {/* Interactive Live Simulation Terminal */}
         <div className="mt-16 mx-auto max-w-4xl">
           <div className="rounded-2xl border border-white/[0.1] bg-zinc-950/90 shadow-2xl shadow-black/90 backdrop-blur-xl overflow-hidden hover:border-blue-500/30 transition-all duration-300">
             {/* Terminal Top Window Bar */}
@@ -144,24 +184,22 @@ export default function Home() {
                 <div className="h-3 w-3 rounded-full bg-rose-500/70" />
                 <div className="h-3 w-3 rounded-full bg-amber-500/70" />
                 <div className="h-3 w-3 rounded-full bg-emerald-500/70" />
-                <span className="ml-2 font-mono text-xs text-zinc-300">
-                  simulation-session.vntu
-                </span>
+                <span className="ml-2 font-mono text-xs text-zinc-300">{t.home.terminalTitle}</span>
               </div>
 
               {/* Track Selection Tabs */}
               <div className="flex items-center gap-1 bg-zinc-900/90 p-0.5 rounded-lg border border-white/[0.08]">
-                {PREVIEW_TRACKS.map((t) => (
+                {tracks.map((track) => (
                   <button
-                    key={t.id}
-                    onClick={() => setActiveTrack(t)}
+                    key={track.id}
+                    onClick={() => setSelectedTrackId(track.id)}
                     className={`btn-tactile rounded-md px-3 py-1 text-xs font-medium ${
-                      activeTrack.id === t.id
+                      activeTrack.id === track.id
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    {t.name}
+                    {track.name}
                   </button>
                 ))}
               </div>
@@ -176,7 +214,9 @@ export default function Home() {
                 </div>
                 <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-zinc-200">AI Інтерв&apos;юер</span>
+                    <span className="text-xs font-semibold text-zinc-200">
+                      {t.home.aiInterviewer}
+                    </span>
                     <span className="rounded bg-rose-500/15 px-2 py-0.5 font-mono text-[10px] text-rose-300 border border-rose-500/30">
                       {activeTrack.role} • {activeTrack.level}
                     </span>
@@ -195,9 +235,9 @@ export default function Home() {
                 <div className="flex-1 space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-zinc-300">
-                      Кандидат (Відповідь)
+                      {t.home.candidateAnswer}
                     </span>
-                    <span className="font-mono text-[10px] text-zinc-500">голос/текст</span>
+                    <span className="font-mono text-[10px] text-zinc-500">{t.home.voiceText}</span>
                   </div>
                   <p className="rounded-xl border border-white/[0.06] bg-zinc-900/40 p-4 text-sm text-zinc-200 leading-relaxed font-sans">
                     {activeTrack.candidateAnswer}
@@ -214,7 +254,7 @@ export default function Home() {
                   <div>
                     <div className="text-xs font-medium text-rose-200 flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-rose-400" />
-                      <span>Миттєвий аналіз глибини знань</span>
+                      <span>{t.home.instantAnalysis}</span>
                     </div>
                     <p className="text-xs text-zinc-300/80 mt-0.5">{activeTrack.highlight}</p>
                   </div>
@@ -224,7 +264,7 @@ export default function Home() {
                   href="/interview/setup"
                   className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 border border-blue-400/30 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-blue-500/20 transition-all whitespace-nowrap"
                 >
-                  <span>Пройти повний тест</span>
+                  <span>{t.home.takeFullTest}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
@@ -238,25 +278,27 @@ export default function Home() {
             <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
               5
             </div>
-            <div className="mt-1 text-xs text-zinc-400 font-medium">Спеціалізованих треків</div>
+            <div className="mt-1 text-xs text-zinc-400 font-medium">{t.home.metrics.tracks}</div>
           </div>
           <div>
             <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
-              3 Рівні
+              {t.home.metrics.levels}
             </div>
-            <div className="mt-1 text-xs text-zinc-400 font-medium">Trainee • Junior • Middle</div>
+            <div className="mt-1 text-xs text-zinc-400 font-medium">
+              {t.home.metrics.levelsDesc}
+            </div>
           </div>
           <div>
             <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-blue-400">
               &lt; 1.8s
             </div>
-            <div className="mt-1 text-xs text-zinc-400 font-medium">Затримка AI аналізу</div>
+            <div className="mt-1 text-xs text-zinc-400 font-medium">{t.home.metrics.latency}</div>
           </div>
           <div>
             <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-emerald-400">
               100%
             </div>
-            <div className="mt-1 text-xs text-zinc-400 font-medium">Типобезпечні API контракти</div>
+            <div className="mt-1 text-xs text-zinc-400 font-medium">{t.home.metrics.contracts}</div>
           </div>
         </div>
 
@@ -264,12 +306,9 @@ export default function Home() {
         <div className="mt-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-100">
-              Підготовка під реальні вимоги ринку
+              {t.home.tracksTitle}
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              Кожен трек містить збалансовані питання від фундаментальної теорії до архитектурних
-              рішень.
-            </p>
+            <p className="mt-2 text-sm text-zinc-400">{t.home.tracksSubtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -279,12 +318,9 @@ export default function Home() {
                 <Code2 className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-blue-300 transition-colors">
-                Frontend Інженерія
+                {t.home.frontendTitle}
               </h3>
-              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
-                React, Next.js App Router, Virtual DOM reconciliation, CSS Architecture, SSR/SSG,
-                Web Performance, Zustand, TypeScript.
-              </p>
+              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">{t.home.frontendDesc}</p>
               <div className="mt-4 flex items-center gap-2 font-mono text-[11px] text-zinc-400">
                 <span className="rounded bg-zinc-800/80 px-2 py-0.5 border border-white/[0.06]">
                   Junior
@@ -301,12 +337,9 @@ export default function Home() {
                 <Database className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-blue-300 transition-colors">
-                Backend & Бази Даних
+                {t.home.backendTitle}
               </h3>
-              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
-                C# .NET 9, Node.js, PostgreSQL, EF Core, REST API design, JWT аутентифікація,
-                індекси, транзакції, кешування.
-              </p>
+              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">{t.home.backendDesc}</p>
               <div className="mt-4 flex items-center gap-2 font-mono text-[11px] text-zinc-400">
                 <span className="rounded bg-zinc-800/80 px-2 py-0.5 border border-white/[0.06]">
                   Trainee
@@ -326,12 +359,9 @@ export default function Home() {
                 <Server className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-emerald-300 transition-colors">
-                DevOps & Інфраструктура
+                {t.home.devopsTitle}
               </h3>
-              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
-                Docker контейнеризація, Docker Compose, CI/CD конвеєри, Render, Vercel, змінні
-                середовища та моніторинг.
-              </p>
+              <p className="mt-2 text-xs text-zinc-400 leading-relaxed">{t.home.devopsDesc}</p>
               <div className="mt-4 flex items-center gap-2 font-mono text-[11px] text-zinc-400">
                 <span className="rounded bg-zinc-800/80 px-2 py-0.5 border border-white/[0.06]">
                   Junior
@@ -352,11 +382,9 @@ export default function Home() {
                 <Layers className="h-4 w-4 text-blue-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Turborepo Монорепо</h4>
+                <h4 className="text-sm font-semibold text-zinc-100">{t.home.archTurborepoTitle}</h4>
                 <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                  Спільні типи та DTO у пакеті{' '}
-                  <code className="text-blue-300 font-mono">@dev-dialogue/api-contracts</code>{' '}
-                  усувають розсинхрон між бекендом і фронтендом.
+                  {t.home.archTurborepoDesc}
                 </p>
               </div>
             </div>
@@ -366,11 +394,8 @@ export default function Home() {
                 <Zap className="h-4 w-4 text-amber-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Автономний Mock Fallback</h4>
-                <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                  Повна працездатність без хмарних ключів: симуляція адаптивних питань працює
-                  локально в пам&apos;яті без зовнішніх витрат.
-                </p>
+                <h4 className="text-sm font-semibold text-zinc-100">{t.home.archMockTitle}</h4>
+                <p className="mt-1 text-xs text-zinc-400 leading-relaxed">{t.home.archMockDesc}</p>
               </div>
             </div>
 
@@ -379,11 +404,8 @@ export default function Home() {
                 <Shield className="h-4 w-4 text-blue-400" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-zinc-100">Role-Based Access</h4>
-                <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
-                  Суворий поділ ролей (Admin / Candidate) із миттєвим перемикачем у навбарі для
-                  зручного тестування фіч журі та викладачами.
-                </p>
+                <h4 className="text-sm font-semibold text-zinc-100">{t.home.archRbacTitle}</h4>
+                <p className="mt-1 text-xs text-zinc-400 leading-relaxed">{t.home.archRbacDesc}</p>
               </div>
             </div>
           </div>
@@ -396,7 +418,7 @@ export default function Home() {
             className="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-blue-600/25 border border-blue-400/30"
           >
             <Sparkles className="h-4 w-4 text-blue-100" />
-            <span>Розпочати тренувальну співбесіду</span>
+            <span>{t.home.finalCta}</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>

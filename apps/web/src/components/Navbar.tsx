@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/lib/useTranslation';
 import {
   LayoutDashboard,
   PlayCircle,
@@ -12,12 +13,14 @@ import {
   UserCheck,
   Sparkles,
   LogOut,
+  Globe,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isAdminViewActive, toggleAdminView, mockLogin, logout } = useAuthStore();
+  const { t, lang, toggleLanguage } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -67,7 +70,7 @@ export const Navbar: React.FC = () => {
             }`}
           >
             <LayoutDashboard className="h-3.5 w-3.5 text-blue-400" />
-            Дашборд
+            {t.navbar.dashboard}
           </Link>
 
           <Link
@@ -79,7 +82,7 @@ export const Navbar: React.FC = () => {
             }`}
           >
             <PlayCircle className="h-3.5 w-3.5 text-blue-400" />
-            Співбесіда
+            {t.navbar.interview}
           </Link>
 
           {showAdminFeatures && (
@@ -92,22 +95,18 @@ export const Navbar: React.FC = () => {
               }`}
             >
               <ShieldAlert className="h-3.5 w-3.5 text-blue-400" />
-              Банк питань (Адмін)
+              {t.navbar.admin}
             </Link>
           )}
         </nav>
 
-        {/* Right Section: Mode Toggle & Profile */}
+        {/* Right Section: Mode Toggle, Language Toggle & Profile */}
         <div className="flex items-center gap-2.5">
           {/* Admin Mode Switcher Button — ONLY visible to real admins */}
           {isRealAdmin && (
             <button
               onClick={toggleAdminView}
-              title={
-                isAdminViewActive
-                  ? 'Перемкнутись на режим кандидата'
-                  : 'Перемкнутись на режим адміна'
-              }
+              title={isAdminViewActive ? 'Switch to Candidate View' : 'Switch to Admin View'}
               className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all border ${
                 isAdminViewActive
                   ? 'bg-blue-950/60 text-blue-200 border-blue-500/40 hover:bg-blue-900/50 shadow-sm shadow-blue-500/10'
@@ -117,16 +116,45 @@ export const Navbar: React.FC = () => {
               {isAdminViewActive ? (
                 <>
                   <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
-                  <span>🛡 Адмін</span>
+                  <span>{t.navbar.adminRole}</span>
                 </>
               ) : (
                 <>
                   <UserCheck className="h-3.5 w-3.5 text-blue-400" />
-                  <span>👤 Кандидат</span>
+                  <span>{t.navbar.candidateRole}</span>
                 </>
               )}
             </button>
           )}
+
+          {/* Language Toggle Button — Placed immediately to the left of Sign In / User Profile */}
+          <button
+            onClick={toggleLanguage}
+            title={lang === 'uk' ? 'Switch to English' : 'Перемкнути на українську'}
+            aria-label={t.navbar.langAria}
+            className="btn-tactile flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-zinc-900/80 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800 transition-all shadow-sm"
+          >
+            <Globe className="h-3.5 w-3.5 text-blue-400" />
+            <span
+              className={
+                lang === 'uk'
+                  ? 'text-blue-400 font-bold font-mono'
+                  : 'text-zinc-500 font-mono hover:text-zinc-300'
+              }
+            >
+              UA
+            </span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span
+              className={
+                lang === 'en'
+                  ? 'text-blue-400 font-bold font-mono'
+                  : 'text-zinc-500 font-mono hover:text-zinc-300'
+              }
+            >
+              EN
+            </span>
+          </button>
 
           {/* User Profile or Sign In Button */}
           {user ? (
@@ -147,14 +175,14 @@ export const Navbar: React.FC = () => {
               </div>
               <button
                 onClick={() => mockLogin(user.role === 'admin' ? 'user' : 'admin')}
-                title="Швидкий тест: змінити роль (Admin ↔ User)"
+                title={t.navbar.roleSwitchTitle}
                 className="btn-tactile flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-zinc-800"
               >
                 <Sparkles className="h-3.5 w-3.5 text-blue-400" />
               </button>
               <button
                 onClick={handleLogout}
-                title="Вийти з акаунту"
+                title={t.navbar.logoutTitle}
                 className="btn-tactile flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-red-300 hover:border-red-500/30 hover:bg-zinc-800"
               >
                 <LogOut className="h-3.5 w-3.5" />
@@ -179,7 +207,7 @@ export const Navbar: React.FC = () => {
                 <polyline points="10 17 15 12 10 7" />
                 <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
-              <span>Sign In</span>
+              <span>{t.navbar.signIn}</span>
             </Link>
           )}
         </div>

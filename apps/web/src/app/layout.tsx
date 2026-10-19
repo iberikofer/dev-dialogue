@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
+import { Footer } from '@/components/Footer';
 import { AuthProvider } from '@/components/AuthProvider';
 
 const geistSans = localFont({
@@ -34,9 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navbar />
           <main className="flex-1">{children}</main>
-          <footer className="border-t border-white/[0.08] bg-zinc-950/80 py-6 text-center text-xs text-zinc-500 font-mono">
-            Dev Dialogue &copy; 2026 &middot; Платформа розроблена для олімпіади ВНТУ ІПЗ ФІТКІ
-          </footer>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
