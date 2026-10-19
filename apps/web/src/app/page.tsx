@@ -100,7 +100,7 @@ export default function Home() {
         </div>
 
         {/* Hero Headline & Subtitle */}
-        <div className="mt-8 text-center max-w-3xl mx-auto">
+        <div className="mt-8 text-center max-w-3xl mx-auto animate-fade-in-up">
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-[-0.035em] text-zinc-100 leading-[1.08]">
             Симулятор технічних співбесід з адаптивним{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400">
@@ -118,7 +118,7 @@ export default function Home() {
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3.5">
             <Link
               href="/interview/setup"
-              className="inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] border border-blue-400/30"
+              className="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 border border-blue-400/30"
             >
               <Sparkles className="h-4 w-4 text-blue-100" />
               <span>Почати співбесіду</span>
@@ -127,7 +127,7 @@ export default function Home() {
 
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/[0.12] bg-zinc-900/80 px-5 py-3.5 text-sm font-medium text-zinc-200 transition-all hover:bg-zinc-800 hover:border-white/[0.22] hover:text-white"
+              className="btn-tactile inline-flex items-center gap-2 rounded-xl border border-white/[0.12] bg-zinc-900/80 px-5 py-3.5 text-sm font-medium text-zinc-200 hover:bg-zinc-800 hover:border-white/[0.22] hover:text-white"
             >
               <span>Переглянути дашборд</span>
               <ChevronRight className="h-4 w-4 text-zinc-400" />
@@ -155,7 +155,7 @@ export default function Home() {
                   <button
                     key={t.id}
                     onClick={() => setActiveTrack(t)}
-                    className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
+                    className={`btn-tactile rounded-md px-3 py-1 text-xs font-medium ${
                       activeTrack.id === t.id
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-zinc-400 hover:text-zinc-200'
@@ -274,8 +274,8 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Frontend */}
-            <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 transition-all duration-200 hover:border-blue-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-blue-500/5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 mb-4 group-hover:scale-105 transition-transform">
+            <div className="card-interactive group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 hover:border-blue-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-blue-500/5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 mb-4 group-hover:scale-105 transition-transform duration-200">
                 <Code2 className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-blue-300 transition-colors">
@@ -296,8 +296,8 @@ export default function Home() {
             </div>
 
             {/* Backend */}
-            <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 transition-all duration-200 hover:border-blue-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-blue-500/5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 mb-4 group-hover:scale-105 transition-transform">
+            <div className="card-interactive group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 hover:border-blue-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-blue-500/5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 mb-4 group-hover:scale-105 transition-transform duration-200">
                 <Database className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-blue-300 transition-colors">
@@ -321,8 +321,8 @@ export default function Home() {
             </div>
 
             {/* DevOps & Infra */}
-            <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 transition-all duration-200 hover:border-emerald-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-emerald-500/5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-4 group-hover:scale-105 transition-transform">
+            <div className="card-interactive group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 hover:border-emerald-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-emerald-500/5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-4 group-hover:scale-105 transition-transform duration-200">
                 <Server className="h-5 w-5" />
               </div>
               <h3 className="text-base font-semibold text-zinc-100 group-hover:text-emerald-300 transition-colors">
@@ -393,7 +393,7 @@ export default function Home() {
         <div className="mt-16 text-center">
           <Link
             href="/interview/setup"
-            className="inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-8 py-4 text-sm font-bold text-white transition-all shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] border border-blue-400/30"
+            className="btn-tactile inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-8 py-4 text-sm font-bold text-white shadow-xl shadow-blue-600/25 border border-blue-400/30"
           >
             <Sparkles className="h-4 w-4 text-blue-100" />
             <span>Розпочати тренувальну співбесіду</span>

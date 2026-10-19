@@ -132,7 +132,7 @@ export const InterviewSetup: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => setDirection(item.id)}
-                  className={`flex flex-col text-left rounded-2xl p-4 transition-all duration-200 border ${
+                  className={`card-interactive flex flex-col text-left rounded-2xl p-4 border ${
                     isSelected
                       ? 'border-blue-500/70 bg-blue-950/25 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/50'
                       : 'border-white/[0.08] bg-zinc-900/40 hover:border-white/[0.16] hover:bg-zinc-900/70'
@@ -172,7 +172,7 @@ export const InterviewSetup: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => setLevel(item.id)}
-                  className={`rounded-2xl p-4 text-left border transition-all duration-200 ${
+                  className={`card-interactive rounded-2xl p-4 text-left border ${
                     isSelected
                       ? 'border-blue-500/70 bg-blue-950/25 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/50'
                       : 'border-white/[0.08] bg-zinc-900/40 hover:border-white/[0.16] hover:bg-zinc-900/70'
@@ -195,7 +195,7 @@ export const InterviewSetup: React.FC = () => {
             <button
               type="button"
               onClick={() => setLanguage('uk')}
-              className={`flex items-center gap-3 rounded-2xl p-4 border transition-all duration-200 ${
+              className={`btn-tactile flex items-center gap-3 rounded-2xl p-4 border ${
                 language === 'uk'
                   ? 'border-blue-500/60 bg-blue-950/25 text-white ring-1 ring-blue-500/50 shadow-sm shadow-blue-500/10'
                   : 'border-white/[0.08] bg-zinc-900/40 text-zinc-400 hover:border-white/[0.16]'
@@ -211,7 +211,7 @@ export const InterviewSetup: React.FC = () => {
             <button
               type="button"
               onClick={() => setLanguage('en')}
-              className={`flex items-center gap-3 rounded-2xl p-4 border transition-all duration-200 ${
+              className={`btn-tactile flex items-center gap-3 rounded-2xl p-4 border ${
                 language === 'en'
                   ? 'border-blue-500/60 bg-blue-950/25 text-white ring-1 ring-blue-500/50 shadow-sm shadow-blue-500/10'
                   : 'border-white/[0.08] bg-zinc-900/40 text-zinc-400 hover:border-white/[0.16]'
@@ -234,7 +234,7 @@ export const InterviewSetup: React.FC = () => {
           <button
             onClick={handleStart}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.01] active:scale-[0.98] border border-blue-400/30 disabled:opacity-50 transition-all"
+            className="btn-tactile inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 border border-blue-400/30 disabled:opacity-50"
           >
             {loading ? (
               <span>Ініціалізація AI...</span>

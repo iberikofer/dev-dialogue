@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import {
   LayoutDashboard,
@@ -11,16 +11,23 @@ import {
   ShieldCheck,
   UserCheck,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
+  const router = useRouter();
   const pathname = usePathname();
-  const { user, isAdminViewActive, toggleAdminView, mockLogin } = useAuthStore();
+  const { user, isAdminViewActive, toggleAdminView, mockLogin, logout } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   const isRealAdmin = mounted && user?.role === 'admin';
   const showAdminFeatures = isRealAdmin && isAdminViewActive;
@@ -39,7 +46,7 @@ export const Navbar: React.FC = () => {
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-3 w-3 text-zinc-100 group-hover:text-rose-400 transition-colors"
+                className="h-3 w-3 text-zinc-100 group-hover:text-blue-400 transition-colors"
               >
                 <path d="M4 17l6-6-6-6" />
                 <path d="M12 19h8" />
@@ -121,8 +128,8 @@ export const Navbar: React.FC = () => {
             </button>
           )}
 
-          {/* User Profile or Quick Demo Role Switcher */}
-          {mounted && user ? (
+          {/* User Profile or Sign In Button */}
+          {user ? (
             <div
               className="flex items-center gap-2 pl-2 border-l border-white/[0.08]"
               suppressHydrationWarning
@@ -141,13 +148,39 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={() => mockLogin(user.role === 'admin' ? 'user' : 'admin')}
                 title="Швидкий тест: змінити роль (Admin ↔ User)"
-                className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-zinc-800 transition"
+                className="btn-tactile flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-zinc-800"
               >
                 <Sparkles className="h-3.5 w-3.5 text-blue-400" />
               </button>
+              <button
+                onClick={handleLogout}
+                title="Вийти з акаунту"
+                className="btn-tactile flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-red-300 hover:border-red-500/30 hover:bg-zinc-800"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
             </div>
           ) : (
-            <div className="h-8 w-20" />
+            <Link
+              href="/login"
+              className="btn-tactile inline-flex items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 text-xs font-semibold text-white shadow-md shadow-blue-600/25 border border-blue-400/30"
+            >
+              {/* Custom Generated Login SVG Icon */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-3.5 w-3.5 text-blue-100"
+              >
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              <span>Sign In</span>
+            </Link>
           )}
         </div>
       </div>

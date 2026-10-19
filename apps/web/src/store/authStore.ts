@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UserRole } from '@dev-dialogue/api-contracts';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export interface UserSession {
   id: string;
@@ -33,8 +34,12 @@ export const useAuthStore = create<AuthState>((set) => {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        initialUser = parsed.user;
-        initialToken = parsed.token;
+        if (parsed.user && parsed.user.id !== '00000000-0000-0000-0000-000000000001') {
+          initialUser = parsed.user;
+          initialToken = parsed.token;
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
         initialAdminView = parsed.isAdminViewActive ?? true;
       }
     } catch {
@@ -49,13 +54,8 @@ export const useAuthStore = create<AuthState>((set) => {
   };
 
   return {
-    user: initialUser ?? {
-      id: '00000000-0000-0000-0000-000000000001',
-      email: 'demo@devdialogue.io',
-      fullName: 'Yaroslav (Admin)',
-      role: 'admin',
-    },
-    token: initialToken ?? 'mock-dev-jwt-token',
+    user: initialUser,
+    token: initialToken,
     isAdminViewActive: initialAdminView,
 
     setUser: (user) =>
@@ -83,9 +83,16 @@ export const useAuthStore = create<AuthState>((set) => {
         return { isAdminViewActive: active };
       }),
 
-    logout: () => {
+    logout: async () => {
       persist(null, null, true);
       set({ user: null, token: null, isAdminViewActive: true });
+      try {
+        if (isSupabaseConfigured()) {
+          await supabase.auth.signOut();
+        }
+      } catch (err) {
+        console.warn('Sign out warning:', err);
+      }
     },
 
     mockLogin: (role = 'admin') => {
