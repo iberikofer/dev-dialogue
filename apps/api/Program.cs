@@ -77,9 +77,7 @@ else
     builder.Services.AddSingleton<IAiService, MockAiService>();
 }
 
-// ==========================================
-// 3. Supabase JWT Authentication
-// ==========================================
+// Supabase JWT Authentication
 var supabaseUrl = builder.Configuration["Supabase:Url"] 
                   ?? Environment.GetEnvironmentVariable("SUPABASE_URL");
 
@@ -98,7 +96,7 @@ builder.Services.AddAuthentication(options =>
         options.RequireHttpsMetadata = false;
         options.SaveToken = true;
     
-        // Вказуємо ASP.NET автоматично підтягувати публічні ключі (JWKS) з Supabase
+        // Automatically fetch public keys (JWKS) from Supabase
         options.Authority = $"{supabaseUrl}/auth/v1";
     
         options.TokenValidationParameters = new TokenValidationParameters
@@ -106,7 +104,7 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuer = true,
             ValidIssuer = $"{supabaseUrl}/auth/v1",
             ValidateAudience = true,
-            ValidAudience = "authenticated", // Стандартний Audience у Supabase
+            ValidAudience = "authenticated", // Standard Supabase audience
             ValidateIssuerSigningKey = true,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
@@ -115,9 +113,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// ==========================================
-// 4. CORS Policy (Next.js Frontend & Local Dev)
-// ==========================================
+// CORS Policy
 var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"] ?? "http://localhost:3000")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -150,7 +146,7 @@ builder.Services.AddCors(options =>
 // Controllers & Swagger
 builder.Services.AddControllers();
 
-// Перевизначення формату помилок валідації (ModelState)
+// Custom validation error response format
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
@@ -195,9 +191,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ==========================================
-// 6. Middleware Pipeline
-// ==========================================
+// Middleware Pipeline
 app.UseExceptionHandler(errorApp =>
 {
     errorApp.Run(async context =>

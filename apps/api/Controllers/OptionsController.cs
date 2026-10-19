@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DevDialogue.Api.Controllers;
 
@@ -9,7 +9,6 @@ public class OptionsController : ControllerBase
     [HttpGet]
     public IActionResult GetOptions()
     {
-        // Повертаємо доступні опції для створення співбесіди
         return Ok(new
         {
             directions = new[] { "frontend", "backend", "devops", "qa", "pm" },
