@@ -125,15 +125,25 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-            .SetIsOriginAllowed(origin => 
-            {
-                var host = new Uri(origin).Host;
-                return host == "localhost" || host.EndsWith(".vercel.app");
-            })
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+        var configuredFrontend = Environment.GetEnvironmentVariable("FRONTEND_URL");
+        var origins = new List<string>
+        {
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "https://*.vercel.app",
+            "https://*.onrender.com"
+        };
+
+        if (!string.IsNullOrWhiteSpace(configuredFrontend))
+        {
+            origins.Add(configuredFrontend.TrimEnd('/'));
+        }
+
+        policy.WithOrigins(origins.ToArray())
+              .SetIsOriginAllowedToAllowWildcardSubdomains()
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
