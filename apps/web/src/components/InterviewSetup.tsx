@@ -10,7 +10,6 @@ import {
   Briefcase,
   Sparkles,
   ArrowRight,
-  ShieldCheck,
   LucideIcon,
 } from 'lucide-react';
 import { InterviewDirection, InterviewLevel, InterviewLanguage } from '@dev-dialogue/api-contracts';
@@ -100,8 +99,8 @@ export const InterviewSetup: React.FC = () => {
     <div className="mx-auto max-w-4xl px-4 py-12">
       {/* Header */}
       <div className="mb-10 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3.5 py-1 text-xs font-medium text-rose-300 border border-rose-500/30 mb-3 shadow-sm shadow-rose-500/10">
-          <Sparkles className="h-3.5 w-3.5 text-rose-400" />
+        <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3.5 py-1 text-xs font-medium text-blue-300 border border-blue-500/30 mb-3 shadow-sm shadow-blue-500/10">
+          <Sparkles className="h-3.5 w-3.5 text-blue-400" />
           Конфігурація технічної сесії
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-[-0.03em] text-zinc-100">
@@ -135,7 +134,7 @@ export const InterviewSetup: React.FC = () => {
                   onClick={() => setDirection(item.id)}
                   className={`flex flex-col text-left rounded-2xl p-4 transition-all duration-200 border ${
                     isSelected
-                      ? 'border-rose-500/60 bg-rose-950/20 shadow-lg shadow-rose-500/10 ring-1 ring-rose-500/50'
+                      ? 'border-blue-500/70 bg-blue-950/25 shadow-lg shadow-blue-500/10 ring-1 ring-blue-500/50'
                       : 'border-white/[0.08] bg-zinc-900/40 hover:border-white/[0.16] hover:bg-zinc-900/70'
                   }`}
                 >
@@ -143,13 +142,12 @@ export const InterviewSetup: React.FC = () => {
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-xl transition-colors ${
                         isSelected
-                          ? 'bg-rose-500 text-white shadow-sm shadow-rose-500/30'
+                          ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
                           : 'bg-zinc-800 text-zinc-400 border border-white/[0.06]'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>
-                    {isSelected && <ShieldCheck className="h-5 w-5 text-rose-400" />}
                   </div>
                   <div className="font-semibold text-zinc-100 text-sm">{item.title}</div>
                   <div className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
@@ -176,7 +174,7 @@ export const InterviewSetup: React.FC = () => {
                   onClick={() => setLevel(item.id)}
                   className={`rounded-2xl p-4 text-left border transition-all duration-200 ${
                     isSelected
-                      ? 'border-indigo-500/60 bg-indigo-950/25 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500/50'
+                      ? 'border-blue-500/70 bg-blue-950/25 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/50'
                       : 'border-white/[0.08] bg-zinc-900/40 hover:border-white/[0.16] hover:bg-zinc-900/70'
                   }`}
                 >
@@ -236,7 +234,7 @@ export const InterviewSetup: React.FC = () => {
           <button
             onClick={handleStart}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50 transition-all"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.01] active:scale-[0.98] border border-blue-400/30 disabled:opacity-50 transition-all"
           >
             {loading ? (
               <span>Ініціалізація AI...</span>

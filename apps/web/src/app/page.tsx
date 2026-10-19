@@ -72,7 +72,7 @@ export default function Home() {
   const [activeTrack, setActiveTrack] = useState<PreviewTrack>(PREVIEW_TRACKS[0]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100 selection:bg-rose-500/25 selection:text-rose-200">
+    <div className="relative min-h-screen overflow-hidden bg-[#09090b] text-zinc-100 selection:bg-blue-500/25 selection:text-blue-200">
       {/* Subtle Technical Grid Mask */}
       <div
         className="pointer-events-none absolute inset-0 z-0 opacity-[0.04]"
@@ -82,20 +82,20 @@ export default function Home() {
         }}
       />
 
-      {/* Dual Luminous Ambient Glows — Electric Blue + Vibrant Raspberry */}
+      {/* Dual Luminous Ambient Glows — Electric Blue + Soft Violet */}
       <div className="pointer-events-none absolute top-[-50px] left-[15%] w-[550px] h-[380px] bg-gradient-to-br from-blue-600/20 via-indigo-600/12 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-[20px] right-[10%] w-[500px] h-[360px] bg-gradient-to-bl from-rose-500/18 via-pink-600/10 to-transparent blur-[150px]" />
+      <div className="pointer-events-none absolute top-[20px] right-[10%] w-[500px] h-[360px] bg-gradient-to-bl from-blue-500/15 via-indigo-600/10 to-transparent blur-[150px]" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 pt-14 pb-24 sm:px-6 lg:px-8">
         {/* Top Status Badge */}
         <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-4 py-1 text-xs font-medium text-rose-200 backdrop-blur-md shadow-sm shadow-rose-500/10 transition-all hover:border-rose-500/50">
-            <span className="flex h-2 w-2 rounded-full bg-rose-400">
-              <span className="h-2 w-2 rounded-full bg-rose-400 animate-ping opacity-75" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1 text-xs font-medium text-blue-200 backdrop-blur-md shadow-sm shadow-blue-500/10 transition-all hover:border-blue-500/50">
+            <span className="flex h-2 w-2 rounded-full bg-blue-400">
+              <span className="h-2 w-2 rounded-full bg-blue-400 animate-ping opacity-75" />
             </span>
             <span>Олімпіада ВНТУ ІПЗ ФІТКІ 2026</span>
-            <span className="text-rose-400/50">•</span>
-            <span className="font-mono text-[11px] text-rose-300">Live AI Simulator</span>
+            <span className="text-blue-400/50">•</span>
+            <span className="font-mono text-[11px] text-blue-300">Live AI Simulator</span>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ export default function Home() {
         <div className="mt-8 text-center max-w-3xl mx-auto">
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-[-0.035em] text-zinc-100 leading-[1.08]">
             Симулятор технічних співбесід з адаптивним{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-300 to-rose-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-indigo-400">
               AI-інтерв&apos;юером
             </span>
           </h1>
@@ -118,9 +118,9 @@ export default function Home() {
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3.5">
             <Link
               href="/interview/setup"
-              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-600 px-6 py-3.5 text-sm font-semibold text-white transition-all shadow-lg shadow-rose-500/25 hover:shadow-rose-500/40 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-6 py-3.5 text-sm font-semibold text-white transition-all shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] border border-blue-400/30"
             >
-              <Sparkles className="h-4 w-4 text-rose-100" />
+              <Sparkles className="h-4 w-4 text-blue-100" />
               <span>Почати співбесіду</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -137,7 +137,7 @@ export default function Home() {
 
         {/* Interactive Live Simulation Terminal (Taste & Anthropic Show, Don't Tell) */}
         <div className="mt-16 mx-auto max-w-4xl">
-          <div className="rounded-2xl border border-white/[0.1] bg-zinc-950/90 shadow-2xl shadow-black/90 backdrop-blur-xl overflow-hidden hover:border-rose-500/30 transition-all duration-300">
+          <div className="rounded-2xl border border-white/[0.1] bg-zinc-950/90 shadow-2xl shadow-black/90 backdrop-blur-xl overflow-hidden hover:border-blue-500/30 transition-all duration-300">
             {/* Terminal Top Window Bar */}
             <div className="flex flex-wrap items-center justify-between border-b border-white/[0.08] bg-zinc-900/50 px-4 py-3 gap-2">
               <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export default function Home() {
                     onClick={() => setActiveTrack(t)}
                     className={`rounded-md px-3 py-1 text-xs font-medium transition-all ${
                       activeTrack.id === t.id
-                        ? 'bg-rose-500/20 text-rose-200 border border-rose-500/40 shadow-sm'
+                        ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
@@ -222,7 +222,7 @@ export default function Home() {
 
                 <Link
                   href="/interview/setup"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 px-3.5 py-1.5 text-xs font-semibold text-rose-200 transition-colors whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 border border-blue-400/30 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-blue-500/20 transition-all whitespace-nowrap"
                 >
                   <span>Пройти повний тест</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -247,7 +247,7 @@ export default function Home() {
             <div className="mt-1 text-xs text-zinc-400 font-medium">Trainee • Junior • Middle</div>
           </div>
           <div>
-            <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-rose-400">
+            <div className="font-mono text-2xl sm:text-3xl font-bold tracking-tight text-blue-400">
               &lt; 1.8s
             </div>
             <div className="mt-1 text-xs text-zinc-400 font-medium">Затримка AI аналізу</div>
@@ -296,11 +296,11 @@ export default function Home() {
             </div>
 
             {/* Backend */}
-            <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 transition-all duration-200 hover:border-rose-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-rose-500/5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 mb-4 group-hover:scale-105 transition-transform">
+            <div className="group rounded-2xl border border-white/[0.08] bg-zinc-900/40 p-6 transition-all duration-200 hover:border-blue-500/40 hover:bg-zinc-900/70 hover:shadow-lg hover:shadow-blue-500/5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 mb-4 group-hover:scale-105 transition-transform">
                 <Database className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-semibold text-zinc-100 group-hover:text-rose-300 transition-colors">
+              <h3 className="text-base font-semibold text-zinc-100 group-hover:text-blue-300 transition-colors">
                 Backend & Бази Даних
               </h3>
               <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
@@ -355,7 +355,7 @@ export default function Home() {
                 <h4 className="text-sm font-semibold text-zinc-100">Turborepo Монорепо</h4>
                 <p className="mt-1 text-xs text-zinc-400 leading-relaxed">
                   Спільні типи та DTO у пакеті{' '}
-                  <code className="text-rose-300 font-mono">@dev-dialogue/api-contracts</code>{' '}
+                  <code className="text-blue-300 font-mono">@dev-dialogue/api-contracts</code>{' '}
                   усувають розсинхрон між бекендом і фронтендом.
                 </p>
               </div>
@@ -376,7 +376,7 @@ export default function Home() {
 
             <div className="flex items-start gap-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-zinc-200 border border-white/[0.1]">
-                <Shield className="h-4 w-4 text-rose-400" />
+                <Shield className="h-4 w-4 text-blue-400" />
               </div>
               <div>
                 <h4 className="text-sm font-semibold text-zinc-100">Role-Based Access</h4>
@@ -393,9 +393,9 @@ export default function Home() {
         <div className="mt-16 text-center">
           <Link
             href="/interview/setup"
-            className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-600 px-8 py-4 text-sm font-bold text-white transition-all shadow-xl shadow-rose-500/25 hover:shadow-rose-500/40 hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 px-8 py-4 text-sm font-bold text-white transition-all shadow-xl shadow-blue-600/25 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] border border-blue-400/30"
           >
-            <Sparkles className="h-4 w-4 text-rose-100" />
+            <Sparkles className="h-4 w-4 text-blue-100" />
             <span>Розпочати тренувальну співбесіду</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
