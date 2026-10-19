@@ -15,16 +15,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 12.14.0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@12.14.0
 
       - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
@@ -36,6 +33,10 @@ jobs:
 
       - name: Build Next.js Frontend
         run: pnpm --filter @dev-dialogue/web build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://lzvjmonlkryljwkanexr.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_API_URL: https://dev-dialogue-web.onrender.com
 
       - name: Build ASP.NET Core Backend
         run: dotnet build apps/api/DevDialogue.Api.csproj -c Release
