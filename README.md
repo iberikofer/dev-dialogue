@@ -1,4 +1,4 @@
-# Dev Dialogue
+# Dev Dialogue .
 
 <p align="center">
   <b>🌐 Language | Мова:</b><br>
