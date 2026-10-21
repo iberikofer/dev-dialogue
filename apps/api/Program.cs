@@ -1,4 +1,5 @@
 using System.Text;
+using System.Security.Claims;
 using DevDialogue.Api.Data;
 using DevDialogue.Api.Models.Entities;
 using DevDialogue.Api.Services.AI;
@@ -111,6 +112,39 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        if (builder.Environment.IsDevelopment())
+        {
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var authHeader = context.Request.Headers.Authorization.ToString();
+                    // Дозволяємо тестування в Postman без живого Supabase токена
+                    if (string.IsNullOrEmpty(authHeader) ||
+                        authHeader.StartsWith("Bearer dev", StringComparison.OrdinalIgnoreCase) ||
+                        authHeader.StartsWith("Bearer test", StringComparison.OrdinalIgnoreCase) ||
+                        authHeader.Contains("mock-dev-jwt-token") ||
+                        authHeader.Contains("DYX1I2"))
+                    {
+                        var claims = new[]
+                        {
+                            new Claim(ClaimTypes.NameIdentifier, "00000000-0000-0000-0000-000000000001"),
+                            new Claim("sub", "00000000-0000-0000-0000-000000000001"),
+                            new Claim(ClaimTypes.Email, "demo@devdialogue.io"),
+                            new Claim("email", "demo@devdialogue.io"),
+                            new Claim(ClaimTypes.Role, "admin"),
+                            new Claim("role", "admin"),
+                            new Claim("aud", "authenticated")
+                        };
+                        var identity = new ClaimsIdentity(claims, "DevMock");
+                        context.Principal = new ClaimsPrincipal(identity);
+                        context.Success();
+                    }
+                    return Task.CompletedTask;
+                }
+            };
+        }
     });
 
 builder.Services.AddAuthorization();
@@ -129,8 +163,7 @@ builder.Services.AddCors(options =>
             .SetIsOriginAllowed(origin => 
             {
                 var host = new Uri(origin).Host;
-                return host == "localhost" || host.EndsWith(".vercel.app");
-            })
+                return host == "localhost" || host.EndsWith(".vercel.app") || host.EndsWith(".onrender.com");            })
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -141,10 +174,25 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 
 // Перевизначення формату помилок валідації (ModelState)
+// Перевизначення формату помилок валідації (ModelState)
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
-        new BadRequestObjectResult(new { error = "Validation failed", code = "VALIDATION_ERROR" });
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value!.Errors.Select(er => er.ErrorMessage).ToArray()
+            );
+
+        return new BadRequestObjectResult(new
+        {
+            error = "Validation failed",
+            code = "VALIDATION_ERROR",
+            errors
+        });
+    };
 });
 
 builder.Services.AddEndpointsApiExplorer();
