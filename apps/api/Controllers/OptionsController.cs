@@ -1,3 +1,4 @@
+using DevDialogue.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevDialogue.Api.Controllers;
@@ -11,9 +12,14 @@ public class OptionsController : ControllerBase
     {
         return Ok(new
         {
-            directions = new[] { "frontend", "backend", "devops", "qa", "pm" },
-            levels = new[] { "junior", "middle", "senior" },
-            languages = new[] { "uk", "en" }
+            directions = SupportedOptions.Directions,
+            levels = SupportedOptions.Levels,
+            stages = SupportedOptions.Stages,
+            languages = new[]
+            {
+                new { id = "uk", code = "uk", name = "Українська" },
+                new { id = "en", code = "en", name = "English" }
+            }
         });
     }
 }

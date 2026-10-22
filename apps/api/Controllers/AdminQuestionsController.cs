@@ -1,4 +1,6 @@
 using DevDialogue.Api.Data;
+using DevDialogue.Api.Helpers;
+using DevDialogue.Api.Models;
 using DevDialogue.Api.Models.Dtos;
 using DevDialogue.Api.Models.Entities;
 using DevDialogue.Api.Security;
@@ -22,11 +24,13 @@ public class AdminQuestionsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<QuestionBankDto>>> GetQuestions(
+    public async Task<ActionResult<PagedResult<QuestionBankDto>>> GetQuestions(
         [FromQuery] string? direction,
         [FromQuery] string? level,
         [FromQuery] string? stage,
-        [FromQuery] bool? isActive)
+        [FromQuery] bool? isActive,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var query = _context.QuestionsBank.AsNoTracking().AsQueryable();
 
@@ -39,8 +43,9 @@ public class AdminQuestionsController : ControllerBase
         if (isActive.HasValue)
             query = query.Where(q => q.IsActive == isActive.Value);
 
-        var items = await query
+        var pagedResult = await query
             .OrderByDescending(q => q.CreatedAt)
+            .ThenByDescending(q => q.Id)
             .Select(q => new QuestionBankDto(
                 q.Id,
                 q.Direction,
@@ -52,22 +57,37 @@ public class AdminQuestionsController : ControllerBase
                 q.CreatedBy,
                 q.CreatedAt
             ))
-            .ToListAsync();
+            .ToPagedAsync(page, pageSize);
 
-        return Ok(items);
+        return Ok(pagedResult);
     }
 
     [HttpPost]
     public async Task<ActionResult<QuestionBankDto>> CreateQuestion([FromBody] CreateQuestionDto dto)
     {
+        if (!SupportedOptions.Directions.Contains(dto.Direction.ToLowerInvariant()))
+        {
+            return BadRequest(new { error = $"Invalid direction '{dto.Direction}'. Supported: {string.Join(", ", SupportedOptions.Directions)}", code = "INVALID_DIRECTION" });
+        }
+
+        if (!SupportedOptions.Levels.Contains(dto.Level.ToLowerInvariant()))
+        {
+            return BadRequest(new { error = $"Invalid level '{dto.Level}'. Supported: {string.Join(", ", SupportedOptions.Levels)}", code = "INVALID_LEVEL" });
+        }
+
+        if (!SupportedOptions.Stages.Contains(dto.Stage.ToLowerInvariant()))
+        {
+            return BadRequest(new { error = $"Invalid stage '{dto.Stage}'. Supported: {string.Join(", ", SupportedOptions.Stages)}", code = "INVALID_STAGE" });
+        }
+
         var userId = User.GetUserId();
 
         var item = new QuestionBank
         {
             Id = Guid.NewGuid(),
-            Direction = dto.Direction,
-            Stage = dto.Stage,
-            Level = dto.Level,
+            Direction = dto.Direction.ToLowerInvariant(),
+            Stage = dto.Stage.ToLowerInvariant(),
+            Level = dto.Level.ToLowerInvariant(),
             Topic = dto.Topic,
             QuestionText = dto.QuestionText,
             IsActive = true,
