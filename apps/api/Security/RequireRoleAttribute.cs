@@ -30,7 +30,14 @@ public class RoleRequirementFilter : IAsyncAuthorizationFilter
         var user = context.HttpContext.User;
         if (user.Identity?.IsAuthenticated != true)
         {
-            context.Result = new UnauthorizedResult();
+            context.Result = new ObjectResult(new
+            {
+                error = "Authentication required.",
+                code = "UNAUTHORIZED"
+            })
+            {
+                StatusCode = StatusCodes.Status401Unauthorized
+            };
             return;
         }
 
@@ -43,12 +50,26 @@ public class RoleRequirementFilter : IAsyncAuthorizationFilter
 
             if (dbUser == null || !string.Equals(dbUser.Role, _requiredRole, StringComparison.OrdinalIgnoreCase))
             {
-                context.Result = new ForbidResult();
+                context.Result = new ObjectResult(new
+                {
+                    error = $"Access denied: '{_requiredRole}' role is required.",
+                    code = "FORBIDDEN"
+                })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
             }
         }
         catch
         {
-            context.Result = new UnauthorizedResult();
+            context.Result = new ObjectResult(new
+            {
+                error = "Authentication required.",
+                code = "UNAUTHORIZED"
+            })
+            {
+                StatusCode = StatusCodes.Status401Unauthorized
+            };
         }
     }
 }

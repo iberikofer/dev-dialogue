@@ -1,10 +1,15 @@
 using System.Text.Json.Serialization;
-
+using System.ComponentModel.DataAnnotations;
 namespace DevDialogue.Api.Models.Dtos;
 
 public record CreateInterviewDto(
+    [Required(ErrorMessage = "Напрямок (Direction) є обов'язковим")]
     string Direction,
+
+    [Required(ErrorMessage = "Рівень (Level) є обов'язковим")]
     string Level,
+
+    [Required(ErrorMessage = "Мова (Language) є обов'язковою")]
     string Language
 );
 
@@ -14,6 +19,8 @@ public record CreateInterviewResponseDto(
 );
 
 public record SendMessageDto(
+    [Required(ErrorMessage = "Повідомлення не може бути порожнім")]
+    [MaxLength(3000, ErrorMessage = "Відповідь перевищує ліміт у 3000 символів")]
     string Content
 );
 

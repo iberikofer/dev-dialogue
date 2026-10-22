@@ -1,5 +1,7 @@
 using System.Text.Json;
 using DevDialogue.Api.Data;
+using DevDialogue.Api.Helpers;
+using DevDialogue.Api.Models;
 using DevDialogue.Api.Models.Dtos;
 using DevDialogue.Api.Models.Entities;
 using DevDialogue.Api.Security;
@@ -35,6 +37,36 @@ public class InterviewsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CreateInterviewResponseDto>> CreateInterview([FromBody] CreateInterviewDto dto)
     {
+        // Валідація мови: якщо мову не підтримується/не знайдено -> 404 Not Found
+        if (!SupportedOptions.Languages.Contains(dto.Language.ToLowerInvariant()))
+        {
+            return NotFound(new
+            {
+                error = $"Language '{dto.Language}' not found. Supported languages: {string.Join(", ", SupportedOptions.Languages)}",
+                code = "LANGUAGE_NOT_FOUND"
+            });
+        }
+
+        // Валідація напрямку
+        if (!SupportedOptions.Directions.Contains(dto.Direction.ToLowerInvariant()))
+        {
+            return BadRequest(new
+            {
+                error = $"Invalid direction '{dto.Direction}'. Supported: {string.Join(", ", SupportedOptions.Directions)}",
+                code = "INVALID_DIRECTION"
+            });
+        }
+
+        // Валідація рівня
+        if (!SupportedOptions.Levels.Contains(dto.Level.ToLowerInvariant()))
+        {
+            return BadRequest(new
+            {
+                error = $"Invalid level '{dto.Level}'. Supported: {string.Join(", ", SupportedOptions.Levels)}",
+                code = "INVALID_LEVEL"
+            });
+        }
+
         var userId = User.GetUserId();
         var dailyLimit = _config.GetValue<int>("DailyInterviewLimit", 10);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -74,7 +106,7 @@ public class InterviewsController : ControllerBase
         // Lookup starting topic from QuestionBank if available
         var seedQuestion = await _context.QuestionsBank
             .AsNoTracking()
-            .Where(q => q.Direction == dto.Direction && q.Level == dto.Level && q.IsActive)
+            .Where(q => q.Direction == dto.Direction.ToLowerInvariant() && q.Level == dto.Level.ToLowerInvariant() && q.IsActive)
             .OrderBy(_ => EF.Functions.Random())
             .FirstOrDefaultAsync();
 
@@ -89,9 +121,9 @@ public class InterviewsController : ControllerBase
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Direction = dto.Direction,
-            Level = dto.Level,
-            Language = dto.Language,
+            Direction = dto.Direction.ToLowerInvariant(),
+            Level = dto.Level.ToLowerInvariant(),
+            Language = dto.Language.ToLowerInvariant(),
             Stage = "hard_skills",
             Status = "active",
             Transcript = JsonSerializer.Serialize(initialTranscript),
@@ -110,34 +142,24 @@ public class InterviewsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<InterviewSummaryDto>>> GetInterviews([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<PagedResult<InterviewSummaryDto>>> GetInterviews([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         var userId = User.GetUserId();
 
         var query = _context.Interviews
             .AsNoTracking()
             .Where(i => i.UserId == userId)
-            .OrderByDescending(i => i.CreatedAt);
-
-        var items = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
+            .OrderByDescending(i => i.CreatedAt)
+            .ThenByDescending(i => i.Id)
             .Select(i => new InterviewSummaryDto(
-                i.Id,
-                i.UserId,
-                i.Direction,
-                i.Level,
-                i.Language,
-                i.Stage,
-                i.Status,
-                i.Score,
-                i.QuestionCount,
-                i.CreatedAt,
-                i.UpdatedAt
-            ))
-            .ToListAsync();
+                i.Id, i.UserId, i.Direction, i.Level, i.Language, 
+                i.Stage, i.Status, i.Score, i.QuestionCount, 
+                i.CreatedAt, i.UpdatedAt
+            ));
 
-        return Ok(items);
+        var pagedResult = await query.ToPagedAsync(page, pageSize);
+
+        return Ok(pagedResult);
     }
 
     [HttpGet("{id:guid}")]
