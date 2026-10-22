@@ -10,7 +10,6 @@ public class OptionsController : ControllerBase
     [HttpGet]
     public IActionResult GetOptions()
     {
-        // Повертаємо доступні опції для створення співбесіди
         return Ok(new
         {
             directions = SupportedOptions.Directions,

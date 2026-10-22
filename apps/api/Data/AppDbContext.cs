@@ -10,12 +10,11 @@ public class AppDbContext : DbContext
     {
     }
 
-    // Нові таблиці
     public DbSet<User> Users => Set<User>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<QuestionBank> QuestionsBank => Set<QuestionBank>();
 
-    // Стара таблиця для старого контролера
+    // Legacy table for backwards compatibility
     public DbSet<Question> Questions => Set<Question>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -67,7 +66,7 @@ public class AppDbContext : DbContext
             entity.HasIndex(q => new { q.Direction, q.Level }).HasDatabaseName("idx_questions_direction_level");
         });
 
-        // Мапінг старої таблиці з виключенням із міграцій
+        // Exclude legacy questions table from migrations
         modelBuilder.Entity<Question>(e =>
         {
             e.ToTable("questions", "public", t => t.ExcludeFromMigrations());

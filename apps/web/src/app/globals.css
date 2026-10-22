@@ -20,6 +20,8 @@
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
 }
 
 body {
@@ -33,8 +35,53 @@ body {
 }
 
 ::selection {
-  background: rgba(244, 63, 94, 0.35);
+  background: rgba(59, 130, 246, 0.35);
   color: #ffffff;
+}
+
+/* Emil Kowalski Tactile Button & Card Physics */
+.btn-tactile {
+  transition: transform 0.16s var(--ease-spring), box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+  will-change: transform;
+}
+.btn-tactile:hover {
+  transform: translateY(-1px);
+}
+.btn-tactile:active {
+  transform: scale(0.97) translateY(0px);
+}
+
+.card-interactive {
+  transition: transform 0.24s var(--ease-spring), box-shadow 0.24s ease, border-color 0.24s ease, background-color 0.24s ease;
+  will-change: transform;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+}
+.card-interactive:active {
+  transform: scale(0.99) translateY(0px);
+}
+
+/* Smooth Fade-in-up Entrance Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s var(--ease-spring) forwards;
+}
+
+/* Impeccable Focus Ring Accessibility */
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
 }
 
 /* Custom modern scrollbars */

@@ -1,0 +1,55 @@
+name: CI & Deployment
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm@12.14.0
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Next.js Frontend
+        run: pnpm --filter @dev-dialogue/web build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://lzvjmonlkryljwkanexr.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_API_URL: https://dev-dialogue-web.onrender.com
+
+      - name: Build ASP.NET Core Backend
+        run: dotnet build apps/api/DevDialogue.Api.csproj -c Release
+
+  deployments-tracker:
+    name: Production Deployment
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: Production
+      url: https://dev-dialogue-web.onrender.com
+
+    steps:
+      - name: Record Render Production Deployment
+        run: echo "Render frontend is live at https://dev-dialogue-web.onrender.com"
