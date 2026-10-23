@@ -9,14 +9,19 @@ export interface UserSession {
   role: UserRole;
 }
 
+export type InterviewLayoutMode = 'center' | 'sections' | 'split';
+
 interface AuthState {
   user: UserSession | null;
   token: string | null;
   isAdminViewActive: boolean;
+  interviewLayout: InterviewLayoutMode;
   setUser: (user: UserSession | null) => void;
   setToken: (token: string | null) => void;
   toggleAdminView: () => void;
   setAdminView: (active: boolean) => void;
+  setInterviewLayout: (mode: InterviewLayoutMode) => void;
+  toggleInterviewLayout: () => void;
   logout: () => void;
   mockLogin: (role?: UserRole) => void;
 }
@@ -57,6 +62,7 @@ export const useAuthStore = create<AuthState>((set) => {
     user: initialUser,
     token: initialToken,
     isAdminViewActive: initialAdminView,
+    interviewLayout: 'center',
 
     setUser: (user) =>
       set((state) => {
@@ -81,6 +87,15 @@ export const useAuthStore = create<AuthState>((set) => {
       set((state) => {
         persist(state.user, state.token, active);
         return { isAdminViewActive: active };
+      }),
+
+    setInterviewLayout: (mode) => set({ interviewLayout: mode }),
+
+    toggleInterviewLayout: () =>
+      set((state) => {
+        const modes: InterviewLayoutMode[] = ['center', 'sections', 'split'];
+        const next = modes[(modes.indexOf(state.interviewLayout) + 1) % modes.length];
+        return { interviewLayout: next };
       }),
 
     logout: async () => {
