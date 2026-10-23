@@ -842,8 +842,12 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
       controls.target.set(0, 1.18, 0.45);
       controls.update();
 
+      eng.THREE = THREE;
+      eng.texLoader = new THREE.TextureLoader();
+      eng.textureCache = new Map();
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__mascotDebug = { camera, controls, scene, renderer, playClip };
+      (window as any).__mascotDebug = { camera, controls, scene, renderer, playClip, applyTexturePreset };
 
       let lastW = initW;
       let lastH = initH;
@@ -857,6 +861,10 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
           const aspect = w / h;
           camera.aspect = aspect;
           camera.fov = computeAdaptiveFov(aspect);
+          const targetZ = computeCameraZ(aspect);
+          if (Math.abs(camera.position.z - targetZ) > 0.05) {
+            camera.position.z = targetZ;
+          }
           camera.updateProjectionMatrix();
           renderer.setSize(w, h, true);
         }
@@ -899,13 +907,34 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
             eng.actions[clip.name] = eng.mixer.clipAction(clip);
           });
 
+          eng.materialsByName = {};
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           model.traverse((child: any) => {
             if (child.isMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
+              if (Array.isArray(child.material)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                child.material.forEach((mat: any) => {
+                  eng.materialsByName[mat.name] = mat;
+                });
+              } else if (child.material) {
+                eng.materialsByName[child.material.name] = child.material;
+              }
             }
           });
+
+          // Apply initial texture preset (e.g. realistic)
+          const initPreset =
+            TEXTURE_PRESETS.find((p) => p.id === activeTexturePresetRef.current) ||
+            TEXTURE_PRESETS[0];
+          applyPresetToMaterials(
+            THREE,
+            eng.materialsByName,
+            initPreset,
+            eng.textureCache,
+            eng.texLoader
+          );
 
           playClip(activeEmotionRef.current || 'Idle');
           setModelReady(true);
@@ -1253,7 +1282,8 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
     setSoundVolume(0.7);
     setActiveEmotion('Idle');
     handleEmotionChange('Idle');
-  }, [handleEmotionChange]);
+    handleTextureChange('realistic');
+  }, [handleEmotionChange, handleTextureChange]);
 
   const userAnswersCount = messages.filter((m) => m.role === 'user').length;
   const lastAssistantIdx = messages.map((m) => m.role).lastIndexOf('assistant');
@@ -1617,6 +1647,56 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* SECTION 4: Текстури та стилі маскота (Version 12) */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-300 uppercase tracking-wider font-mono border-b border-white/[0.06] pb-1">
+                  <Palette className="h-3.5 w-3.5 text-pink-400" />
+                  <span>Текстура маскота (Version 12)</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  {TEXTURE_PRESETS.map((preset) => {
+                    const isActive = activeTexturePreset === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleTextureChange(preset.id)}
+                        className={`flex items-center gap-2 p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-rose-500/20 border-rose-500/50 text-zinc-100 shadow-sm'
+                            : 'bg-zinc-900/60 border-white/[0.06] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                        }`}
+                      >
+                        <span className="text-base shrink-0">{preset.icon}</span>
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium font-mono truncate">
+                            {sessionLanguage === 'uk' ? preset.nameUk : preset.nameEn}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 truncate">
+                            {preset.id}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Texture Description */}
+                {(() => {
+                  const currentPreset = TEXTURE_PRESETS.find((p) => p.id === activeTexturePreset);
+                  if (!currentPreset) return null;
+                  return (
+                    <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-white/[0.06] text-[11px] text-zinc-300 leading-relaxed font-sans">
+                      <span className="font-semibold text-zinc-100">
+                        {currentPreset.icon} {sessionLanguage === 'uk' ? currentPreset.nameUk : currentPreset.nameEn}:
+                      </span>{' '}
+                      {sessionLanguage === 'uk' ? currentPreset.descUk : currentPreset.descEn}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           )}
 
@@ -1624,14 +1704,15 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({
           <button
             onClick={handleComplete}
             disabled={completing || userAnswersCount === 0}
-            className="btn-tactile flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-semibold text-white shadow-md shadow-emerald-600/20 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 transition-all cursor-pointer"
+            className="btn-tactile flex items-center gap-1.5 sm:gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold text-white shadow-md shadow-emerald-600/20 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 transition-all cursor-pointer shrink-0"
           >
             {completing ? (
               <span>{t.chat.generatingReport}</span>
             ) : (
               <>
-                <CheckCircle className="h-4 w-4" />
-                <span>{t.chat.finishBtn}</span>
+                <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                <span className="hidden sm:inline">{t.chat.finishBtn}</span>
+                <span className="sm:hidden">{sessionLanguage === 'uk' ? 'Кінець' : 'End'}</span>
               </>
             )}
           </button>
