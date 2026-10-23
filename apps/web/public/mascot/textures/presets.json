@@ -1,0 +1,68 @@
+[
+  {
+    "id": "realistic",
+    "name": "Realistic Human",
+    "name_ua": "Реалістична людина",
+    "icon": "👤",
+    "desc": "Natural human skin with vascular flush, pores, hazel iris & veined sclera",
+    "desc_ua": "Анатомічна текстура шкіри з порами, рум'янцем, карими очима та капілярами",
+    "path": "textures/realistic/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "cyber",
+    "name": "Cyber Android",
+    "name_ua": "Кіберпанк / Андроїд",
+    "icon": "🤖",
+    "desc": "Non-human titanium composite shell with glowing cyan circuits & tech iris",
+    "desc_ua": "Синтетична титанова броня з неоновими бірюзовими мікросхемами та оптичним сенсором",
+    "path": "textures/cyber/",
+    "metalness": 0.65,
+    "roughness": 0.6
+  },
+  {
+    "id": "alien",
+    "name": "Bioluminescent Alien",
+    "name_ua": "Неземна / Алієн",
+    "icon": "👽",
+    "desc": "Monotonic alien violet skin with glowing turquoise bioluminescent markings",
+    "desc_ua": "Монотонна фіолетова інопланетна шкіра з сяючими біолюмінесцентними точками",
+    "path": "textures/alien/",
+    "metalness": 0.08,
+    "roughness": 0.8
+  },
+  {
+    "id": "noir",
+    "name": "Noir Chiaroscuro",
+    "name_ua": "Чорно-білий контраст",
+    "icon": "🎬",
+    "desc": "High-contrast monochromatic graphic novel aesthetic with deep charcoal shadows",
+    "desc_ua": "Висококонтрастний монохромний нуар зі стрімкими тінями та світлом",
+    "path": "textures/noir/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "stylized",
+    "name": "Stylized Anime",
+    "name_ua": "Стилізована / Аніме",
+    "icon": "🎨",
+    "desc": "Porcelain cel-shaded skin, soft pastel blush & sparkling emerald anime eyes",
+    "desc_ua": "Чиста порцелянова шкіра, ніжний рум'янець та виразні смарагдові очі",
+    "path": "textures/stylized/",
+    "metalness": 0.0,
+    "roughness": 0.9
+  },
+  {
+    "id": "clay",
+    "name": "Studio Clay (No Textures)",
+    "name_ua": "Без текстур (Глина)",
+    "icon": "🏛️",
+    "desc": "Clean untextured matte sculpture finish resembling an artist's studio bust",
+    "desc_ua": "Мінімалістична матова скульптурна глина без текстур, як у художній майстерні",
+    "path": "textures/clay/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  }
+]

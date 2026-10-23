@@ -78,3 +78,12 @@ yarn-error.log*
 
 # OS / Misc
 *.local
+
+
+# 
+
+*.png
+*.playwright-mcp/
+
+preview.html
+preview-assets.js

@@ -14,12 +14,23 @@ import {
   Sparkles,
   LogOut,
   Globe,
+  Columns2,
+  Maximize2,
+  LayoutGrid,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, isAdminViewActive, toggleAdminView, mockLogin, logout } = useAuthStore();
+  const {
+    user,
+    isAdminViewActive,
+    toggleAdminView,
+    interviewLayout,
+    toggleInterviewLayout,
+    mockLogin,
+    logout,
+  } = useAuthStore();
   const { t, lang, toggleLanguage } = useTranslation();
   const [mounted, setMounted] = useState(false);
 
@@ -34,6 +45,10 @@ export const Navbar: React.FC = () => {
 
   const isRealAdmin = mounted && user?.role === 'admin';
   const showAdminFeatures = isRealAdmin && isAdminViewActive;
+  const isInterviewSession =
+    pathname?.startsWith('/interview/') &&
+    pathname !== '/interview/setup' &&
+    !pathname?.endsWith('/report');
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-zinc-950/75 backdrop-blur-xl transition-all">
@@ -100,8 +115,56 @@ export const Navbar: React.FC = () => {
           )}
         </nav>
 
-        {/* Right Section: Mode Toggle, Language Toggle & Profile */}
+        {/* Right Section: Layout Switcher, Mode Toggle, Language Toggle & Profile */}
         <div className="flex items-center gap-2.5">
+          {/* Small Control to Switch Interview Layout Format (Center Focus vs Top-Sections vs Split Chat) */}
+          {isInterviewSession && (
+            <button
+              type="button"
+              onClick={toggleInterviewLayout}
+              title={
+                interviewLayout === 'center'
+                  ? lang === 'uk'
+                    ? 'Поточний формат: Фокус (клікніть для зміни)'
+                    : 'Current format: Focus (click to switch)'
+                  : interviewLayout === 'sections'
+                    ? lang === 'uk'
+                      ? 'Поточний формат: Секції (клікніть для зміни)'
+                      : 'Current format: Sections (click to switch)'
+                    : lang === 'uk'
+                      ? 'Поточний формат: Чат (клікніть для зміни)'
+                      : 'Current format: Split Chat (click to switch)'
+              }
+              aria-label="Switch interview layout"
+              className="btn-tactile flex items-center gap-1.5 rounded-xl border border-white/[0.08] bg-zinc-900/80 px-2.5 py-1.5 text-xs font-medium text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800 transition-all shadow-sm"
+            >
+              {interviewLayout === 'center' && (
+                <>
+                  <Maximize2 className="h-3.5 w-3.5 text-rose-400" />
+                  <span className="font-mono text-[11px]">
+                    {lang === 'uk' ? 'Фокус' : 'Focus'}
+                  </span>
+                </>
+              )}
+              {interviewLayout === 'sections' && (
+                <>
+                  <LayoutGrid className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="font-mono text-[11px]">
+                    {lang === 'uk' ? 'Секції' : 'Sections'}
+                  </span>
+                </>
+              )}
+              {interviewLayout === 'split' && (
+                <>
+                  <Columns2 className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="font-mono text-[11px]">
+                    {lang === 'uk' ? 'Чат' : 'Split'}
+                  </span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* Admin Mode Switcher Button — ONLY visible to real admins */}
           {isRealAdmin && (
             <button
