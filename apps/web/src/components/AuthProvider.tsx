@@ -15,6 +15,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const rawRole = session.user.user_metadata?.role as string | undefined;
       const role: UserRole = rawRole === 'admin' ? 'admin' : 'user';
 
+      const appProviders = (session.user.app_metadata?.providers as string[] | undefined) || [];
+      const identityProviders = session.user.identities?.map((id) => id.provider) || [];
+      const rawProvider = (session.user.app_metadata?.provider as string | undefined) || 'email';
+      const linkedProviders = Array.from(new Set([...appProviders, ...identityProviders, rawProvider]));
+
       const userSession: UserSession = {
         id: session.user.id,
         email: session.user.email || '',
@@ -24,6 +29,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           session.user.email?.split('@')[0] ||
           'User',
         role,
+        avatarUrl:
+          session.user.user_metadata?.avatar_url ||
+          session.user.user_metadata?.picture ||
+          null,
+        linkedProviders,
       };
 
       setUser(userSession);
@@ -37,6 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...userSession,
             fullName: me.fullName || userSession.fullName,
             role: me.role,
+            linkedProviders,
           });
         }
       } catch (err) {

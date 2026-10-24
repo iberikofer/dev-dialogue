@@ -132,3 +132,12 @@ export interface UserDashboardStats {
   dailyLimit: number;
   remainingToday: number;
 }
+
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages?: number;
+}
+

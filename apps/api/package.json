@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "dotnet watch run",
+    "dev": "dotnet watch --non-interactive run",
     "build": "dotnet build -c Release",
     "lint": "dotnet format --verify-no-changes"
   }

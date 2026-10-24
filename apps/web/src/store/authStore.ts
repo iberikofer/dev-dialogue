@@ -7,6 +7,8 @@ export interface UserSession {
   email: string;
   fullName: string | null;
   role: UserRole;
+  avatarUrl?: string | null;
+  linkedProviders?: string[];
 }
 
 interface AuthState {
@@ -15,6 +17,9 @@ interface AuthState {
   isAdminViewActive: boolean;
   setUser: (user: UserSession | null) => void;
   setToken: (token: string | null) => void;
+  updateProfile: (updates: Partial<UserSession>) => void;
+  linkProvider: (provider: string) => void;
+  unlinkProvider: (provider: string) => void;
   toggleAdminView: () => void;
   setAdminView: (active: boolean) => void;
   logout: () => void;
@@ -70,6 +75,40 @@ export const useAuthStore = create<AuthState>((set) => {
         return { token };
       }),
 
+    updateProfile: (updates) =>
+      set((state) => {
+        if (!state.user) return state;
+        const updatedUser = { ...state.user, ...updates };
+        persist(updatedUser, state.token, state.isAdminViewActive);
+        return { user: updatedUser };
+      }),
+
+    linkProvider: (provider: string) =>
+      set((state) => {
+        if (!state.user) return state;
+        const current = state.user.linkedProviders || ['email'];
+        if (current.includes(provider)) return state;
+        const updatedUser = { ...state.user, linkedProviders: [...current, provider] };
+        persist(updatedUser, state.token, state.isAdminViewActive);
+        return { user: updatedUser };
+      }),
+
+    unlinkProvider: (provider: string) =>
+      set((state) => {
+        if (!state.user) return state;
+        const current = state.user.linkedProviders || ['email'];
+        const targets =
+          provider === 'linkedin_oidc' || provider === 'linkedin'
+            ? ['linkedin_oidc', 'linkedin']
+            : [provider];
+        const updatedUser = {
+          ...state.user,
+          linkedProviders: current.filter((p) => !targets.includes(p)),
+        };
+        persist(updatedUser, state.token, state.isAdminViewActive);
+        return { user: updatedUser };
+      }),
+
     toggleAdminView: () =>
       set((state) => {
         const next = !state.isAdminViewActive;
@@ -104,6 +143,7 @@ export const useAuthStore = create<AuthState>((set) => {
         email: role === 'admin' ? 'admin@devdialogue.io' : 'student@devdialogue.io',
         fullName: role === 'admin' ? 'Yaroslav (Admin)' : 'Candidate User',
         role,
+        linkedProviders: role === 'admin' ? ['github', 'google'] : ['email', 'github'],
       };
       persist(mockUser, 'mock-dev-jwt-token', true);
       set({ user: mockUser, token: 'mock-dev-jwt-token', isAdminViewActive: true });

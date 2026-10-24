@@ -24,7 +24,7 @@ export default function AuthCallbackPage() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#09090b] text-zinc-300">
       <div className="flex flex-col items-center gap-3">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-        <p className="text-xs font-mono text-zinc-400">Авторизація через Google...</p>
+        <p className="text-xs font-mono text-zinc-400">Авторизація та синхронізація сесії...</p>
       </div>
     </div>
   );

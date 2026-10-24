@@ -6,7 +6,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "clean": "turbo run clean",
+    "clean": "turbo run clean && node -e \"const fs=require('fs'); if(fs.existsSync('apps/web/.next')) fs.rmSync('apps/web/.next', {recursive:true,force:true});\"",
+    "free": "powershell -Command \"try { Get-NetTCPConnection -LocalPort 3000,5238 -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {

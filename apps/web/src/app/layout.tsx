@@ -30,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="uk" className="dark">
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-[#09090b] text-zinc-100 min-h-screen flex flex-col`}
       >
         <AuthProvider>

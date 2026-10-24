@@ -10,6 +10,7 @@ import {
   QuestionBankItem,
   CreateQuestionRequest,
   UpdateQuestionRequest,
+  PagedResult,
 } from '@dev-dialogue/api-contracts';
 import { useAuthStore } from '@/store/authStore';
 
@@ -81,7 +82,7 @@ export const api = {
       }),
 
     list: (page = 1, pageSize = 20) =>
-      request<InterviewSummary[]>(`/api/interviews?page=${page}&pageSize=${pageSize}`),
+      request<PagedResult<InterviewSummary>>(`/api/interviews?page=${page}&pageSize=${pageSize}`),
 
     getById: (id: string) => request<InterviewDetail>(`/api/interviews/${id}`),
 
@@ -111,13 +112,17 @@ export const api = {
       level?: string;
       stage?: string;
       isActive?: boolean;
+      page?: number;
+      pageSize?: number;
     }) => {
       const query = new URLSearchParams();
       if (params?.direction) query.append('direction', params.direction);
       if (params?.level) query.append('level', params.level);
       if (params?.stage) query.append('stage', params.stage);
       if (params?.isActive !== undefined) query.append('isActive', String(params.isActive));
-      return request<QuestionBankItem[]>(`/api/admin/questions?${query.toString()}`);
+      if (params?.page) query.append('page', String(params.page));
+      if (params?.pageSize) query.append('pageSize', String(params.pageSize));
+      return request<PagedResult<QuestionBankItem>>(`/api/admin/questions?${query.toString()}`);
     },
 
     createQuestion: (dto: CreateQuestionRequest) =>

@@ -32,7 +32,8 @@ export const AdminPanel: React.FC = () => {
         const data = await api.admin.getQuestions(
           directionFilter ? { direction: directionFilter } : undefined
         );
-        setQuestions(data);
+        const items = Array.isArray(data) ? data : data?.items || [];
+        setQuestions(items);
       } catch {
         // Fallback demo questions
         if (lang === 'en') {
@@ -204,7 +205,7 @@ export const AdminPanel: React.FC = () => {
 
       {/* Questions Table */}
       <div className="rounded-2xl border border-white/[0.08] bg-zinc-900/60 overflow-hidden shadow-lg">
-        {questions.length === 0 ? (
+        {!Array.isArray(questions) || questions.length === 0 ? (
           <div className="p-12 text-center text-zinc-400 text-sm">
             {lang === 'uk'
               ? 'Питань за обраним фільтром не знайдено.'
@@ -223,7 +224,7 @@ export const AdminPanel: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.06]">
-                {questions.map((q) => (
+                {Array.isArray(questions) && questions.map((q) => (
                   <tr key={q.id} className="hover:bg-zinc-800/40 transition">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/20 uppercase font-mono">

@@ -29,7 +29,8 @@ export const DashboardView: React.FC = () => {
           api.interviews.list(),
         ]);
         setStats(statsData);
-        setInterviews(listData);
+        const items = Array.isArray(listData) ? listData : listData?.items || [];
+        setInterviews(items);
       } catch {
         // Fallback demo data for immediate testing
         setStats({
@@ -180,7 +181,7 @@ export const DashboardView: React.FC = () => {
               </div>
             ))}
           </div>
-        ) : interviews.length === 0 ? (
+        ) : !Array.isArray(interviews) || interviews.length === 0 ? (
           <div className="p-8 text-center text-zinc-400 text-sm">{t.dashboard.emptyHistory}</div>
         ) : (
           <div className="overflow-x-auto">
@@ -196,7 +197,7 @@ export const DashboardView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.06]">
-                {interviews.map((item) => (
+                {Array.isArray(interviews) && interviews.map((item) => (
                   <tr key={item.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-xs text-zinc-400 font-mono">
                       {new Date(item.createdAt).toLocaleDateString([], {

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "node -e \"const fs=require('fs'); if(fs.existsSync('.next/BUILD_ID')) fs.rmSync('.next', {recursive:true,force:true});\" && next dev -p 3000",
+    "clean": "node -e \"const fs=require('fs'); if(fs.existsSync('.next')) fs.rmSync('.next', {recursive:true,force:true});\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
