@@ -18,7 +18,9 @@ import {
   Settings,
   ChevronDown,
   HelpCircle,
+  ServerOff,
 } from 'lucide-react';
+import { useBackendStatusStore } from '@/store/backendStatusStore';
 import { UserSettingsModal } from './UserSettingsModal';
 
 // Custom SVG: User with a square head with rounded corners
@@ -49,6 +51,7 @@ export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { user, isAdminViewActive, toggleAdminView, mockLogin, logout } = useAuthStore();
   const { t, lang, toggleLanguage } = useTranslation();
+  const { status: backendStatus, reopenBanner, checkHealth: recheckBackend } = useBackendStatusStore();
   const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -165,6 +168,27 @@ export const Navbar: React.FC = () => {
                   <span>{t.navbar.candidateRole}</span>
                 </>
               )}
+            </button>
+          )}
+
+          {/* Backend Status Indicator (visible if offline) */}
+          {mounted && backendStatus === 'offline' && (
+            <button
+              onClick={() => {
+                reopenBanner();
+                recheckBackend();
+              }}
+              title={lang === 'uk' ? 'Бекенд недоступний (натисніть, щоб оновити)' : 'Backend offline (click to retry)'}
+              className="btn-tactile flex items-center gap-1.5 rounded-xl border border-amber-500/35 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-500/20 hover:border-amber-500/50 transition-all shadow-sm shadow-amber-500/10"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500"></span>
+              </span>
+              <ServerOff className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline font-mono text-[11px] font-semibold">
+                {t.backendStatus.offlineBadge}
+              </span>
             </button>
           )}
 

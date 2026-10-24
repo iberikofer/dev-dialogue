@@ -13,6 +13,7 @@ import {
   PagedResult,
 } from '@dev-dialogue/api-contracts';
 import { useAuthStore } from '@/store/authStore';
+import { useBackendStatusStore } from '@/store/backendStatusStore';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -47,7 +48,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       headers,
     });
 
+    useBackendStatusStore.getState().setOnline();
+
     if (!res.ok) {
+      if (res.status >= 502 && res.status <= 504) {
+        useBackendStatusStore.getState().setOffline(`HTTP ${res.status}`);
+      }
       let errorData: unknown;
       try {
         errorData = await res.json();
@@ -63,6 +69,13 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
     return await res.json();
   } catch (err: unknown) {
+    if (
+      err instanceof TypeError ||
+      (err as { name?: string })?.name === 'AbortError' ||
+      (err as { code?: string })?.code === 'ECONNREFUSED'
+    ) {
+      useBackendStatusStore.getState().setOffline('Connection failed');
+    }
     const message = err instanceof Error ? err.message : String(err);
     console.warn(`[ApiClient] Failed to connect to backend at ${url}:`, message);
     throw err;

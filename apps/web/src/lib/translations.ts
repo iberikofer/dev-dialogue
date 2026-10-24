@@ -251,6 +251,15 @@ export const translations = {
       activeStatus: 'Активне',
       inactiveStatus: 'Неактивне',
     },
+    backendStatus: {
+      offlineTitle: 'Бекенд недоступний',
+      offlineDesc: 'Сервер API наразі вимкнений або перезавантажується. Платформа працює в демонстраційному режимі з локальними даними.',
+      checking: 'Перевірка...',
+      recheck: 'Повторити спробу',
+      reconnected: 'Зʼєднання відновлено',
+      offlineBadge: 'Бекенд офлайн',
+      onlineBadge: 'Бекенд онлайн',
+    },
   },
   en: {
     navbar: {
@@ -502,6 +511,15 @@ export const translations = {
       tableActions: 'Actions',
       activeStatus: 'Active',
       inactiveStatus: 'Inactive',
+    },
+    backendStatus: {
+      offlineTitle: 'Backend Offline',
+      offlineDesc: 'API server is currently unreachable or starting up. The platform is running in demo mode with local mock data.',
+      checking: 'Checking...',
+      recheck: 'Retry connection',
+      reconnected: 'Connection restored',
+      offlineBadge: 'Backend offline',
+      onlineBadge: 'Backend online',
     },
   },
 };

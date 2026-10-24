@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
+import { BackendStatusBanner } from '@/components/BackendStatusBanner';
 import { Footer } from '@/components/Footer';
 import { AuthProvider } from '@/components/AuthProvider';
 
@@ -20,7 +21,15 @@ export const metadata: Metadata = {
   title: 'Dev Dialogue — AI Технічний Симулятор Співбесід',
   description:
     'Платформа інтерактивної підготовки до технічних співбесід для Frontend, Backend, DevOps, QA та PM з AI-зворотним звʼязком.',
+  icons: {
+    icon: [
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
+
 
 export default function RootLayout({
   children,
@@ -35,6 +44,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <Navbar />
+          <BackendStatusBanner />
           <main className="flex-1">{children}</main>
           <Footer />
         </AuthProvider>
