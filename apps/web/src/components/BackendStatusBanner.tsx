@@ -11,11 +11,14 @@ export const BackendStatusBanner: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
 
+  // 1. Initial health check on mount only
   useEffect(() => {
     setMounted(true);
     checkHealth();
+  }, [checkHealth]);
 
-    // Check periodically: every 15s if offline, every 60s if online
+  // 2. Periodic polling based on connection status without immediate synchronous re-trigger
+  useEffect(() => {
     const intervalMs = status === 'online' ? 60000 : 15000;
     const interval = setInterval(() => {
       checkHealth();

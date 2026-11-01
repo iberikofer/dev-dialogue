@@ -48,6 +48,21 @@ export const useBackendStatusStore = create<BackendStatusState>()((set, get) => 
   reopenBanner: () => set({ isDismissed: false }),
 
   checkHealth: async () => {
+    // Avoid concurrent overlapping checks
+    if (get().status === 'checking') {
+      return false;
+    }
+
+    // Guard against unconfigured or dummy placeholder URLs
+    if (!API_BASE_URL || API_BASE_URL.includes('your-api.onrender.com')) {
+      set({
+        status: 'offline',
+        lastChecked: Date.now(),
+        errorMessage: 'Backend URL is not configured',
+      });
+      return false;
+    }
+
     set({ status: 'checking' });
     const cleanUrl = API_BASE_URL.replace(/\/$/, '');
     const pingEndpoint = `${cleanUrl}/health`;
