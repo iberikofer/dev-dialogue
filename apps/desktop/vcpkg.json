@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "dev-dialogue-desktop",
+  "version-string": "1.0.0",
+  "description": "Dev Dialogue C++ native desktop client",
+  "homepage": "https://github.com/iberikofer/dev-dialogue",
+  "dependencies": [
+    {
+      "name": "qtbase",
+      "features": ["network", "gui", "widgets", "concurrent", "ssl"]
+    },
+    {
+      "name": "qtdeclarative"
+    },
+    {
+      "name": "qtquickcontrols2"
+    },
+    {
+      "name": "qtsvg"
+    },
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.11.3"
+    },
+    {
+      "name": "gtest",
+      "version>=": "1.14.0"
+    }
+  ]
+}
+
