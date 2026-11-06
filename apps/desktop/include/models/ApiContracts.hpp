@@ -245,6 +245,10 @@ struct ApiError {
             }
 
             // 2. Supabase Auth alternative: { "msg": "..." } or { "error_code": "...", "message": "..." }
+            if (j.contains("error_code") && j["error_code"].is_string()) {
+                err.code = j["error_code"].get<std::string>();
+            }
+
             if (j.contains("msg") && j["msg"].is_string()) {
                 err.message = j["msg"].get<std::string>();
                 if (j.contains("code")) {
@@ -297,6 +301,10 @@ struct ApiError {
         }
 
         return err;
+    }
+
+    static ApiError fromJson(const nlohmann::json& j, int statusCode) {
+        return fromJson(statusCode, j.dump());
     }
 };
 
