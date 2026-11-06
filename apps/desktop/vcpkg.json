@@ -25,7 +25,10 @@
     {
       "name": "gtest",
       "version>=": "1.14.0"
+    },
+    {
+      "name": "qtkeychain",
+      "version>=": "0.14.2"
     }
   ]
 }
-
