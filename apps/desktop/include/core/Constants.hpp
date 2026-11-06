@@ -14,10 +14,16 @@ constexpr int DefaultWindowHeight = 800;
 constexpr int MinWindowWidth = 960;
 constexpr int MinWindowHeight = 640;
 
-constexpr int NetworkTimeoutMs = 15000;
-constexpr int HealthCheckIntervalMs = 30000;
+// Network Timeouts (ms)
+constexpr int ColdStartTimeoutMs = 90000;    // 90 s for Render cold start and healthcheck
+constexpr int StandardTimeoutMs = 30000;     // 30 s for normal REST operations
+constexpr int HealthCheckIntervalMs = 30000; // 30 s periodic heartbeat
+constexpr int MaxGetRetries = 2;             // Retries allowed only for GET requests
+constexpr int WakingUpThresholdMs = 3000;    // Trigger isWakingUp if request takes > 3s
 
-constexpr std::string_view StorageKeyToken = "jwt_token";
+// Secure Storage Keys
+constexpr std::string_view StorageKeyAccessToken = "jwt_token";
+constexpr std::string_view StorageKeyRefreshToken = "refresh_token";
 constexpr std::string_view StorageKeyUser = "user_session";
 constexpr std::string_view StorageKeyLanguage = "ui_language";
 
