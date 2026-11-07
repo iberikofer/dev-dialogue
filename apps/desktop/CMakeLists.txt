@@ -131,6 +131,19 @@ if(GTest_FOUND)
         tests/unit/TestSecureStorage.cpp
         tests/unit/TestApiClient.cpp
 
+        # Headers for AUTOMOC
+        include/core/AppConfig.hpp
+        include/core/Constants.hpp
+        include/models/ApiContracts.hpp
+        include/network/ApiClient.hpp
+        include/network/NetworkEndpoints.hpp
+        include/services/ISecureStorage.hpp
+        include/services/InMemorySecureStorage.hpp
+        include/services/QtKeychainSecureStorage.hpp
+        include/services/AuthService.hpp
+        include/services/InterviewService.hpp
+        include/services/AdminService.hpp
+
         # Sources required for tests
         src/core/AppConfig.cpp
         src/network/ApiClient.cpp
@@ -165,12 +178,19 @@ if(GTest_FOUND)
     endif()
 
     include(GoogleTest)
-    gtest_discover_tests(DevDialogueTests)
+    gtest_discover_tests(DevDialogueTests
+        DISCOVERY_MODE PRE_TEST
+        PROPERTIES ENVIRONMENT "PATH=${CMAKE_BINARY_DIR}/vcpkg_installed/x64-windows/bin;$ENV{PATH}"
+    )
 endif()
 
-if(WIN32)
+find_program(WINDEPLOYQT_EXECUTABLE windeployqt
+    HINTS "${Qt6_DIR}/../../../tools/Qt6/bin" "${Qt6_DIR}/../../../bin"
+)
+
+if(WIN32 AND WINDEPLOYQT_EXECUTABLE AND CMAKE_BUILD_TYPE STREQUAL "Release")
     add_custom_command(TARGET DevDialogue POST_BUILD
-        COMMAND ${Qt6_DIR}/../../../bin/windeployqt.exe
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
             --qmldir ${CMAKE_CURRENT_SOURCE_DIR}/qml
             $<TARGET_FILE:DevDialogue>
         COMMENT "Deploying Qt runtime libraries with windeployqt..."
