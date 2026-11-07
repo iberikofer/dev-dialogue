@@ -18,6 +18,12 @@
 #include "models/ApiContracts.hpp"
 #include "services/ISecureStorage.hpp"
 
+class ApiClientTest;
+
+namespace devdialogue::services {
+class AuthService;
+}
+
 namespace devdialogue::network {
 
 template<typename T>
@@ -28,6 +34,9 @@ class ApiClient : public QObject {
     Q_PROPERTY(bool isOnline READ isOnline NOTIFY onlineStatusChanged)
     Q_PROPERTY(bool isWakingUp READ isWakingUp NOTIFY wakingUpChanged)
     Q_PROPERTY(QString lastErrorMessage READ lastErrorMessage NOTIFY errorOccurred)
+
+    friend class devdialogue::services::AuthService;
+    friend class ::ApiClientTest;
 
 public:
     explicit ApiClient(
@@ -69,10 +78,6 @@ public:
         std::function<void(int statusCode, const QByteArray& responseData, const QString& networkError)> callback
     );
 
-    // Refresh Queue Management (Called by AuthService)
-    void onRefreshSucceeded(const std::string& newAccessToken, const std::string& newRefreshToken);
-    void onRefreshFailed(const models::ApiError& error);
-
 signals:
     void onlineStatusChanged(bool isOnline);
     void wakingUpChanged(bool isWakingUp);
@@ -80,6 +85,9 @@ signals:
     void unauthorizedDetected(); // Emitted when 401 occurs to trigger refresh
 
 private:
+    // Refresh Queue Management (Called by AuthService or friend test)
+    void onRefreshSucceeded(const std::string& newAccessToken, const std::string& newRefreshToken);
+    void onRefreshFailed(const models::ApiError& error);
     struct PendingRequest {
         QNetworkRequest request;
         QByteArray verb;
