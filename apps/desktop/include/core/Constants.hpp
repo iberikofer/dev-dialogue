@@ -22,9 +22,9 @@ constexpr int MaxGetRetries = 2;             // Retries allowed only for GET req
 constexpr int WakingUpThresholdMs = 3000;    // Trigger isWakingUp if request takes > 3s
 
 // Secure Storage Keys
-constexpr std::string_view StorageKeyAccessToken = "jwt_token";
-constexpr std::string_view StorageKeyRefreshToken = "refresh_token";
-constexpr std::string_view StorageKeyUser = "user_session";
-constexpr std::string_view StorageKeyLanguage = "ui_language";
+inline constexpr const char* StorageKeyAccessToken = "jwt_token";
+inline constexpr const char* StorageKeyRefreshToken = "refresh_token";
+inline constexpr const char* StorageKeyUser = "user_session";
+inline constexpr const char* StorageKeyLanguage = "ui_language";
 
 } // namespace devdialogue::core::constants

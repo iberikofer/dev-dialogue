@@ -142,8 +142,8 @@ TEST(ApiContractsTest, InterviewFeedbackReportDualFieldNaming) {
         {"summary", "Solid interview"},
         {"score", 80},
         {"strengths", {"Networking"}},
-        {"weaknesses", {}},
-        {"recommendations", {}},
+        {"weaknesses", nlohmann::json::array()},
+        {"recommendations", nlohmann::json::array()},
         {"question_scores", {{{"question", "Explain TCP handshake"}, {"score", 85}, {"comment", "Good"}}}}
     };
 
@@ -156,28 +156,24 @@ TEST(ApiContractsTest, InterviewFeedbackReportDualFieldNaming) {
 
 TEST(ApiContractsTest, OptionsResponseRoundtrip) {
     nlohmann::json j = {
-        {"tracks", {
-            {{"id", "frontend"}, {"title", "Frontend Development"}},
-            {{"id", "backend"}, {"title", "Backend Development"}}
-        }},
-        {"levels", {
-            {{"id", "junior"}, {"title", "Junior"}},
-            {{"id", "middle"}, {"title", "Middle"}},
-            {{"id", "senior"}, {"title", "Senior"}}
-        }},
+        {"directions", {"frontend", "backend", "devops"}},
+        {"levels", {"trainee", "junior", "middle", "senior"}},
+        {"stages", {"hard_skills", "soft_skills", "english"}},
         {"languages", {
-            {{"id", "uk"}, {"title", "Українська"}},
-            {{"id", "en"}, {"title", "English"}}
+            {{"id", "uk"}, {"code", "uk"}, {"name", "Українська"}},
+            {{"id", "en"}, {"code", "en"}, {"name", "English"}}
         }}
     };
 
     OptionsResponse options = j.get<OptionsResponse>();
-    ASSERT_EQ(options.tracks.size(), 2u);
-    EXPECT_EQ(options.tracks[0].id, "frontend");
-    ASSERT_EQ(options.levels.size(), 3u);
-    EXPECT_EQ(options.levels[2].id, "senior");
+    ASSERT_EQ(options.directions.size(), 3u);
+    EXPECT_EQ(options.directions[0], "frontend");
+    ASSERT_EQ(options.levels.size(), 4u);
+    EXPECT_EQ(options.levels[3], "senior");
+    ASSERT_EQ(options.stages.size(), 3u);
+    EXPECT_EQ(options.stages[0], "hard_skills");
     ASSERT_EQ(options.languages.size(), 2u);
-    EXPECT_EQ(options.languages[0].title, "Українська");
+    EXPECT_EQ(options.languages[0].name, "Українська");
 }
 
 TEST(ApiContractsTest, PagedResultRoundtrip) {

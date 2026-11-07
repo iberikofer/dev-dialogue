@@ -36,8 +36,8 @@ TEST_F(ApiClientTest, TokenStorageIntegration) {
     EXPECT_EQ(client->refreshToken(), "refresh-456");
 
     // Verify written to storage
-    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyAccessToken), "access-123");
-    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyRefreshToken), "refresh-456");
+    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyAccessToken).value_or(""), "access-123");
+    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyRefreshToken).value_or(""), "refresh-456");
 
     // Clear tokens
     client->clearTokens();
@@ -62,8 +62,8 @@ TEST_F(ApiClientTest, RefreshQueueSingleFlightAndReplay) {
     // Tokens must be updated together
     EXPECT_EQ(client->accessToken(), "new-access-xyz");
     EXPECT_EQ(client->refreshToken(), "new-refresh-uvw");
-    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyAccessToken), "new-access-xyz");
-    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyRefreshToken), "new-refresh-uvw");
+    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyAccessToken).value_or(""), "new-access-xyz");
+    EXPECT_EQ(storage->readCredential(core::constants::StorageKeyRefreshToken).value_or(""), "new-refresh-uvw");
 }
 
 TEST_F(ApiClientTest, RefreshQueueFailureClearsTokens) {

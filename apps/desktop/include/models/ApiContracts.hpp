@@ -222,6 +222,10 @@ struct ApiError {
     bool isNetworkDown{false};
     std::unordered_map<std::string, std::vector<std::string>> validationErrors;
 
+    ApiError() = default;
+    ApiError(int status, std::string msg, std::string payload = "", bool isDown = false, std::string c = "")
+        : statusCode(status), code(std::move(c)), message(std::move(msg)), rawPayload(std::move(payload)), isNetworkDown(isDown) {}
+
     static ApiError fromJson(int statusCode, const std::string& rawPayload) {
         ApiError err;
         err.statusCode = statusCode;
@@ -563,16 +567,16 @@ inline void to_json(nlohmann::json& j, const InterviewFeedbackReport& r) {
 }
 
 inline void from_json(const nlohmann::json& j, InterviewFeedbackReport& r) {
-    if (j.contains("summary")) j.at("summary").get_to(r.summary);
-    if (j.contains("score")) j.at("score").get_to(r.score);
-    if (j.contains("strengths")) j.at("strengths").get_to(r.strengths);
-    if (j.contains("weaknesses")) j.at("weaknesses").get_to(r.weaknesses);
-    if (j.contains("recommendations")) j.at("recommendations").get_to(r.recommendations);
+    if (j.contains("summary") && j["summary"].is_string()) j.at("summary").get_to(r.summary);
+    if (j.contains("score") && j["score"].is_number()) j.at("score").get_to(r.score);
+    if (j.contains("strengths") && j["strengths"].is_array()) j.at("strengths").get_to(r.strengths);
+    if (j.contains("weaknesses") && j["weaknesses"].is_array()) j.at("weaknesses").get_to(r.weaknesses);
+    if (j.contains("recommendations") && j["recommendations"].is_array()) j.at("recommendations").get_to(r.recommendations);
 
     // Support both camelCase ("questionScores") and ASP.NET Core snake_case ("question_scores")
-    if (j.contains("questionScores")) {
+    if (j.contains("questionScores") && j["questionScores"].is_array()) {
         j.at("questionScores").get_to(r.questionScores);
-    } else if (j.contains("question_scores")) {
+    } else if (j.contains("question_scores") && j["question_scores"].is_array()) {
         j.at("question_scores").get_to(r.questionScores);
     }
 }

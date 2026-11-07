@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <optional>
 #include <unordered_map>
 #include <mutex>
@@ -13,9 +14,9 @@ public:
     explicit QtKeychainSecureStorage(std::string serviceName = "DevDialogue");
     ~QtKeychainSecureStorage() override = default;
 
-    bool writeCredential(const std::string& key, const std::string& secret) override;
-    std::optional<std::string> readCredential(const std::string& key) override;
-    bool deleteCredential(const std::string& key) override;
+    bool writeCredential(std::string_view key, std::string_view secret) override;
+    std::optional<std::string> readCredential(std::string_view key) override;
+    bool deleteCredential(std::string_view key) override;
     void clearAll() override;
 
 private:

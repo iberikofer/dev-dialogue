@@ -25,15 +25,18 @@ QtKeychainSecureStorage::QtKeychainSecureStorage(std::string serviceName)
 #endif
 }
 
-bool QtKeychainSecureStorage::writeCredential(const std::string& key, const std::string& secret) {
+bool QtKeychainSecureStorage::writeCredential(std::string_view key, std::string_view secret) {
+    std::string keyStr(key);
+    std::string secretStr(secret);
+
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_memoryCache[key] = secret;
+    m_memoryCache[keyStr] = secretStr;
 
 #ifdef HAS_QTKEYCHAIN
     QKeychain::WritePasswordJob job(QString::fromStdString(m_serviceName));
     job.setAutoDelete(false);
-    job.setKey(QString::fromStdString(key));
-    job.setTextData(QString::fromStdString(secret));
+    job.setKey(QString::fromStdString(keyStr));
+    job.setTextData(QString::fromStdString(secretStr));
 
     QEventLoop loop;
     QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
@@ -41,7 +44,7 @@ bool QtKeychainSecureStorage::writeCredential(const std::string& key, const std:
     loop.exec();
 
     if (job.error()) {
-        qWarning() << "QtKeychain writeCredential error for key" << QString::fromStdString(key) << ":" << job.errorString();
+        qWarning() << "QtKeychain writeCredential error for key" << QString::fromStdString(keyStr) << ":" << job.errorString();
         return false;
     }
     return true;
@@ -50,9 +53,11 @@ bool QtKeychainSecureStorage::writeCredential(const std::string& key, const std:
 #endif
 }
 
-std::optional<std::string> QtKeychainSecureStorage::readCredential(const std::string& key) {
+std::optional<std::string> QtKeychainSecureStorage::readCredential(std::string_view key) {
+    std::string keyStr(key);
+
     std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_memoryCache.find(key);
+    auto it = m_memoryCache.find(keyStr);
     if (it != m_memoryCache.end()) {
         return it->second;
     }
@@ -60,7 +65,7 @@ std::optional<std::string> QtKeychainSecureStorage::readCredential(const std::st
 #ifdef HAS_QTKEYCHAIN
     QKeychain::ReadPasswordJob job(QString::fromStdString(m_serviceName));
     job.setAutoDelete(false);
-    job.setKey(QString::fromStdString(key));
+    job.setKey(QString::fromStdString(keyStr));
 
     QEventLoop loop;
     QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
@@ -72,21 +77,23 @@ std::optional<std::string> QtKeychainSecureStorage::readCredential(const std::st
     }
 
     std::string secret = job.textData().toStdString();
-    m_memoryCache[key] = secret;
+    m_memoryCache[keyStr] = secret;
     return secret;
 #else
     return std::nullopt;
 #endif
 }
 
-bool QtKeychainSecureStorage::deleteCredential(const std::string& key) {
+bool QtKeychainSecureStorage::deleteCredential(std::string_view key) {
+    std::string keyStr(key);
+
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_memoryCache.erase(key);
+    m_memoryCache.erase(keyStr);
 
 #ifdef HAS_QTKEYCHAIN
     QKeychain::DeletePasswordJob job(QString::fromStdString(m_serviceName));
     job.setAutoDelete(false);
-    job.setKey(QString::fromStdString(key));
+    job.setKey(QString::fromStdString(keyStr));
 
     QEventLoop loop;
     QObject::connect(&job, &QKeychain::Job::finished, &loop, &QEventLoop::quit);
