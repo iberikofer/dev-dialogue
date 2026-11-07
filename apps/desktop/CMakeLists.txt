@@ -127,9 +127,11 @@ if(GTest_FOUND)
 
     add_executable(DevDialogueTests
         tests/main.cpp
+        tests/helpers/MockHttpServer.hpp
         tests/unit/TestApiContracts.cpp
         tests/unit/TestSecureStorage.cpp
         tests/unit/TestApiClient.cpp
+        tests/unit/TestAuthService.cpp
 
         # Headers for AUTOMOC
         include/core/AppConfig.hpp
@@ -156,6 +158,7 @@ if(GTest_FOUND)
 
     target_include_directories(DevDialogueTests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
     target_link_libraries(DevDialogueTests PRIVATE
