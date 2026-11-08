@@ -70,6 +70,25 @@ if(WIN32)
     target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32)
 endif()
 
+# Theme.qml is a QML singleton; register it so its properties are available
+# to every QML component in the module.
+set_source_files_properties(qml/styles/Theme.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
+# Dev-build convenience: point Qt at its installation prefix so QML modules,
+# platform plugins, and translations are found regardless of working directory.
+if(WIN32)
+    get_filename_component(_qt6_prefix "${Qt6_DIR}/../../.." ABSOLUTE)
+    file(WRITE "${CMAKE_BINARY_DIR}/qt.conf"
+        "[Paths]\n"
+        "Prefix=${_qt6_prefix}\n"
+        "Plugins=${_qt6_prefix}/share/qt6/plugins\n"
+        "Qml2Imports=${_qt6_prefix}/share/qt6/qml\n"
+        "QmlImports=${_qt6_prefix}/share/qt6/qml\n"
+    )
+endif()
+
 qt_add_qml_module(DevDialogue
     URI "DevDialogue.App"
     VERSION 1.0
@@ -84,7 +103,13 @@ if(WIN32)
     add_custom_command(TARGET DevDialogue POST_BUILD
         COMMAND ${Qt6_DIR}/../../../bin/windeployqt.exe
             --qmldir ${CMAKE_CURRENT_SOURCE_DIR}/qml
+            --compiler-runtime
             $<TARGET_FILE:DevDialogue>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_qt6_prefix}/bin/libstdc++-6.dll"
+            "${_qt6_prefix}/bin/libgcc_s_seh-1.dll"
+            "${_qt6_prefix}/bin/libwinpthread-1.dll"
+            "$<TARGET_FILE_DIR:DevDialogue>"
         COMMENT "Deploying Qt runtime libraries with windeployqt..."
     )
 endif()
