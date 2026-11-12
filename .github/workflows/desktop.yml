@@ -1,0 +1,125 @@
+name: Desktop App CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ['desktop-v*']
+    paths:
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - '.github/workflows/desktop.yml'
+
+concurrency:
+  group: desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04, macos-14]
+        vcpkg_triplet: [x64-windows, x64-linux, x64-osx]
+        include:
+          - os: windows-latest
+            vcpkg_triplet: x64-windows
+          - os: ubuntu-24.04
+            vcpkg_triplet: x64-linux
+          - os: macos-14
+            vcpkg_triplet: x64-osx
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.8.3'
+          modules: 'qtdeclarative qtquickcontrols2 qtsvg qttools'
+          cache: true
+
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          "$RUNNER_TEMP/vcpkg/vcpkg" install --triplet ${{ matrix.vcpkg_triplet }} nlohmann-json gtest
+        env:
+          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+
+      - name: Configure CMake
+        run: >
+          cmake -B build -S apps/desktop
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+
+      - name: Build executable
+        run: cmake --build build --config Release --parallel
+
+      - name: Run test suite
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  release-windows:
+    name: Windows Installer
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    needs: build-and-test
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.8.3'
+          modules: 'qtdeclarative qtquickcontrols2 qtsvg qttools'
+          cache: true
+
+      - name: Setup vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
+          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+          & "$env:RUNNER_TEMP\vcpkg\vcpkg.exe" install --triplet x64-windows nlohmann-json gtest
+        env:
+          VCPKG_ROOT: ${{ runner.temp }}\vcpkg
+
+      - name: Configure CMake
+        run: >
+          cmake -B build -S apps/desktop
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+
+      - name: Build executable
+        run: cmake --build build --config Release --parallel
+
+      - name: Run test suite
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Deploy the Qt runtime
+        run: |
+          & "$env:QT_ROOT_DIR\bin\windeployqt.exe" --qmldir apps\desktop\qml --compiler-runtime --no-translations apps\desktop\build\Release\DevDialogue.exe
+
+      - name: Stage the bundle
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\package | Out-Null
+          Copy-Item apps\desktop\build\Release\* dist\package -Recurse -Force
+
+      - name: Compile the installer
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" apps\desktop\installer\installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload the installer
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/DevDialogue-Setup-x64.exe
+          generate_release_notes: true

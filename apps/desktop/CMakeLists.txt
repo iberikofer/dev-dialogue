@@ -14,6 +14,12 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
+# The QML files keep their `qrc:/DevDialogue/App/...` resource prefix, which
+# the icons and the font loader rely on.
+if(POLICY QTP0004)
+    cmake_policy(SET QTP0004 OLD)
+endif()
+
 if(MSVC)
     add_compile_options(/W4 /permissive- /utf-8 /EHsc)
     add_compile_definitions(UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
@@ -30,31 +36,92 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
     Network
     Svg
     Concurrent
+    LinguistTools
 )
 
 find_package(nlohmann_json 3.11.3 REQUIRED)
 
-add_executable(DevDialogue
-    src/main.cpp
-    
-    # Core Infrastructure
-    src/core/AppConfig.cpp
-    include/core/AppConfig.hpp
-    include/core/Constants.hpp
-    
+option(DEVDIALOGUE_BUILD_TESTS "Build the desktop test suite" ON)
+
+# ---------------------------------------------------------------------------
+# DevDialogueCore: plain C++ contracts and the offline engine.
+# Kept free of Qt so the unit tests can link it without a QCoreApplication.
+# ---------------------------------------------------------------------------
+add_library(DevDialogueCore STATIC
     # Models & Contracts
     include/models/ApiContracts.hpp
-    
-    # ViewModels
-    src/viewmodels/NavigationViewModel.cpp
-    include/viewmodels/NavigationViewModel.hpp
+
+    # Shared QML/C++ helpers
+    include/core/EnumUtils.hpp
+
+    # Offline engine
+    include/services/MockAiEngine.hpp
+    src/services/MockAiEngine.cpp
 )
 
-target_include_directories(DevDialogue PRIVATE
+target_include_directories(DevDialogueCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(DevDialogue PRIVATE
+target_link_libraries(DevDialogueCore PUBLIC
+    nlohmann_json::nlohmann_json
+)
+
+# ---------------------------------------------------------------------------
+# DevDialogueApp: the Qt application layer (services, models, view models).
+# ---------------------------------------------------------------------------
+add_library(DevDialogueApp STATIC
+    # Core Infrastructure
+    src/core/AppConfig.cpp
+    include/core/AppConfig.hpp
+    src/core/I18nManager.cpp
+    include/core/I18nManager.hpp
+    include/core/Constants.hpp
+
+    # Models
+    include/models/MessageListModel.hpp
+    src/models/MessageListModel.cpp
+    include/models/InterviewListModel.hpp
+    src/models/InterviewListModel.cpp
+    include/models/QuestionListModel.hpp
+    src/models/QuestionListModel.cpp
+
+    # Network Layer
+    include/network/ApiClient.hpp
+    src/network/ApiClient.cpp
+
+    # Services
+    include/services/SecureStorage.hpp
+    src/services/SecureStorage.cpp
+    include/services/AuthService.hpp
+    src/services/AuthService.cpp
+    include/services/InterviewService.hpp
+    src/services/InterviewService.cpp
+    include/services/AdminService.hpp
+    src/services/AdminService.cpp
+
+    # ViewModels
+    src/viewmodels/NavigationViewModel.cpp
+    include/viewmodels/NavigationViewModel.hpp
+    src/viewmodels/AuthViewModel.cpp
+    include/viewmodels/AuthViewModel.hpp
+    src/viewmodels/DashboardViewModel.cpp
+    include/viewmodels/DashboardViewModel.hpp
+    src/viewmodels/SetupViewModel.cpp
+    include/viewmodels/SetupViewModel.hpp
+    src/viewmodels/ChatViewModel.cpp
+    include/viewmodels/ChatViewModel.hpp
+    src/viewmodels/ReportViewModel.cpp
+    include/viewmodels/ReportViewModel.hpp
+    src/viewmodels/AdminViewModel.cpp
+    include/viewmodels/AdminViewModel.hpp
+)
+
+target_include_directories(DevDialogueApp PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(DevDialogueApp PUBLIC
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -63,17 +130,64 @@ target_link_libraries(DevDialogue PRIVATE
     Qt6::Network
     Qt6::Svg
     Qt6::Concurrent
-    nlohmann_json::nlohmann_json
+    DevDialogueCore
 )
 
 if(WIN32)
-    target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32)
+    target_link_libraries(DevDialogueApp PUBLIC Crypt32 Advapi32)
 endif()
 
-# Theme.qml is a QML singleton; register it so its properties are available
-# to every QML component in the module.
-set_source_files_properties(qml/styles/Theme.qml
+add_executable(DevDialogue
+    src/main.cpp
+)
+
+target_link_libraries(DevDialogue PRIVATE
+    DevDialogueApp
+)
+
+# Theme and design-token files are QML singletons; register them so their
+# properties are available to every component in the module.
+set(QML_SINGLETONS
+    qml/styles/Theme.qml
+    qml/styles/Typography.qml
+    qml/styles/Icons.qml
+    qml/styles/Labels.qml
+)
+set_source_files_properties(${QML_SINGLETONS}
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
+# The full list of QML modules, kept in a variable so the test suite can
+# generate a disk based `qmldir` for the QML test runner.
+set(QML_MODULE_FILES
+    qml/Main.qml
+    qml/styles/Theme.qml
+    qml/styles/Typography.qml
+    qml/styles/Icons.qml
+    qml/styles/Labels.qml
+    qml/components/TactileButton.qml
+    qml/components/DarkCard.qml
+    qml/components/Badge.qml
+    qml/components/MessageBubble.qml
+    qml/components/ScoreGauge.qml
+    qml/components/ProgressRing.qml
+    qml/components/KpiTile.qml
+    qml/components/StatusBanner.qml
+    qml/components/SegmentedControl.qml
+    qml/components/AppModal.qml
+    qml/components/EmptyState.qml
+    qml/components/ErrorBanner.qml
+    qml/components/Spinner.qml
+    qml/components/DarkTextField.qml
+    qml/components/DarkTextArea.qml
+    qml/components/PillSwitch.qml
+    qml/components/Navbar.qml
+    qml/views/LandingView.qml
+    qml/views/DashboardView.qml
+    qml/views/SetupView.qml
+    qml/views/ChatRoomView.qml
+    qml/views/ReportView.qml
+    qml/views/AdminView.qml
 )
 
 # Dev-build convenience: point Qt at its installation prefix so QML modules,
@@ -89,14 +203,43 @@ if(WIN32)
     )
 endif()
 
+# The QML layer is compiled into the executable. The test suite generates a
+# disk based `qmldir` so the QML tests can import the very same sources.
 qt_add_qml_module(DevDialogue
     URI "DevDialogue.App"
     VERSION 1.0
     QML_FILES
-        qml/Main.qml
-        qml/styles/Theme.qml
-        qml/components/Navbar.qml
-        qml/views/LandingView.qml
+        ${QML_MODULE_FILES}
+    RESOURCES
+        resources/fonts/Geist-VF.ttf
+        resources/fonts/GeistMono-VF.ttf
+        resources/icons/frontend.svg
+        resources/icons/backend.svg
+        resources/icons/devops.svg
+        resources/icons/qa.svg
+        resources/icons/pm.svg
+        resources/icons/bot.svg
+        resources/icons/user.svg
+        resources/icons/sparkles.svg
+        resources/icons/shield.svg
+        resources/icons/warning.svg
+        resources/icons/refresh.svg
+        resources/icons/dashboard.svg
+        resources/icons/chart.svg
+        resources/icons/plus.svg
+        resources/icons/logout.svg
+)
+
+target_link_libraries(DevDialogue PRIVATE
+    DevDialogueApp
+)
+
+# Compile the Qt Linguist catalogs and embed them as :/i18n/devdialogue_<code>.qm.
+qt_add_translations(DevDialogue
+    TS_FILES
+        translations/devdialogue_uk.ts
+    RESOURCE_PREFIX "/i18n"
+    LUPDATE_OPTIONS -no-obsolete
 )
 
 if(WIN32)
@@ -112,5 +255,10 @@ if(WIN32)
             "$<TARGET_FILE_DIR:DevDialogue>"
         COMMENT "Deploying Qt runtime libraries with windeployqt..."
     )
+endif()
+
+if(DEVDIALOGUE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 

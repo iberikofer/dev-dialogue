@@ -1,116 +1,152 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import DevDialogue.App
 
 Item {
     id: landingRoot
 
+    TactileButton {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 24
+        implicitWidth: 64
+        implicitHeight: 32
+        buttonRadius: Theme.radiusSm
+        outlined: true
+        text: i18n.isUkrainian ? "УК" : "EN"
+        textColor: Theme.textSecondary
+        onClicked: i18n.toggleLanguage()
+
+        Accessible.role: Accessible.Button
+        Accessible.name: qsTr("Interface language: %1").arg(i18n.currentLanguageLabel)
+    }
+
     ColumnLayout {
         anchors.centerIn: parent
-        spacing: 24
-        width: Math.min(800, parent.width - 48)
+        spacing: 22
+        width: Math.min(760, parent.width - 64)
 
-        // Pill badge
         Rectangle {
             Layout.alignment: Qt.AlignHCenter
             radius: 100
-            color: Qt.rgba(0.2, 0.4, 0.9, 0.15)
-            border.color: Qt.rgba(0.2, 0.4, 0.9, 0.3)
-            implicitWidth: pillText.implicitWidth + 20
-            implicitHeight: 28
+            color: Qt.rgba(0.39, 0.4, 0.95, 0.14)
+            border.color: Qt.rgba(0.39, 0.4, 0.95, 0.34)
+            implicitWidth: pillRow.implicitWidth + 24
+            implicitHeight: 30
 
-            Text {
-                id: pillText
+            RowLayout {
+                id: pillRow
                 anchors.centerIn: parent
-                text: "✨ C++ Native Desktop Edition"
-                font.family: Theme.fontMono
-                font.pixelSize: 12
-                font.weight: Font.Medium
-                color: "#60a5fa"
+                spacing: 8
+
+                Image {
+                    source: Icons.sparkles
+                    sourceSize.width: 14
+                    sourceSize.height: 14
+                    Layout.preferredWidth: 14
+                    Layout.preferredHeight: 14
+                    fillMode: Image.PreserveAspectFit
+                }
+
+                Text {
+                    text: qsTr("Native C++ Desktop Edition")
+                    font.family: Theme.fontMono
+                    font.pixelSize: Typography.small
+                    font.weight: Typography.weightMedium
+                    color: Theme.accentIndigo
+                }
             }
         }
 
-        // Title
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "Dev Dialogue"
+            text: qsTr("Dev Dialogue")
             font.family: Theme.fontSans
-            font.pixelSize: 42
-            font.weight: Font.ExtraBold
+            font.pixelSize: 46
+            font.weight: Typography.weightBold
             color: Theme.textPrimary
             horizontalAlignment: Text.AlignHCenter
         }
 
-        // Subtitle
         Text {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
-            text: "Платформа інтерактивної підготовки до технічних співбесід з адаптивним AI-інтерв'юером. Працює автономно або з підключенням до хмарного бекенду."
+            text: qsTr("Practise technical interviews with an adaptive AI interviewer. Run fully offline with the embedded engine, or connect to the Dev Dialogue backend.")
             font.family: Theme.fontSans
-            font.pixelSize: 16
+            font.pixelSize: Typography.bodyLarge
+            lineHeight: Typography.lineNormal
             color: Theme.textSecondary
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
         }
 
-        Item { height: 16 }
+        Item { Layout.preferredHeight: 6 }
 
-        // Action Buttons
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            spacing: 16
+            spacing: 14
 
-            Button {
-                id: startBtn
-                implicitHeight: 46
-                implicitWidth: 200
-                contentItem: Text {
-                    text: "Почати співбесіду →"
-                    font.family: Theme.fontSans
-                    font.pixelSize: 14
-                    font.weight: Font.DemiBold
-                    color: "#ffffff"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
+            TactileButton {
+                implicitWidth: 210
+                implicitHeight: 48
+                text: qsTr("Start an interview")
+                onClicked: {
+                    if (authVM.isAuthenticated)
+                        navVM.navigateToSetup()
+                    else
+                        authVM.isLoginModalOpen = true
                 }
-                background: Rectangle {
-                    radius: Theme.radiusMd
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0.0; color: Theme.accentRose }
-                        GradientStop { position: 1.0; color: Theme.accentIndigo }
-                    }
-                    scale: startBtn.down ? 0.97 : (startBtn.hovered ? 1.02 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 120 } }
-                }
-                onClicked: navVM.navigateToSetup()
             }
 
-            Button {
-                id: dashBtn
-                implicitHeight: 46
-                implicitWidth: 160
-                contentItem: Text {
-                    text: "Мій дашборд"
-                    font.family: Theme.fontSans
-                    font.pixelSize: 14
-                    font.weight: Font.Medium
-                    color: Theme.textPrimary
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
+            TactileButton {
+                implicitWidth: 150
+                implicitHeight: 48
+                text: authVM.isAuthenticated ? qsTr("Dashboard") : qsTr("Sign in")
+                outlined: true
+                onClicked: {
+                    if (authVM.isAuthenticated)
+                        navVM.navigateToDashboard()
+                    else
+                        authVM.isLoginModalOpen = true
                 }
-                background: Rectangle {
-                    radius: Theme.radiusMd
-                    color: Theme.backgroundSecondary
-                    border.color: Theme.borderSubtle
-                    border.width: 1
-                    scale: dashBtn.down ? 0.97 : (dashBtn.hovered ? 1.02 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 120 } }
+            }
+        }
+
+        Item { Layout.preferredHeight: 8 }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignHCenter
+            spacing: 22
+
+            Repeater {
+                model: [
+                    { label: qsTr("5 interview tracks"), icon: Icons.dashboard },
+                    { label: qsTr("Works offline"), icon: Icons.shield },
+                    { label: qsTr("Instant scorecard"), icon: Icons.chart }
+                ]
+
+                delegate: RowLayout {
+                    required property var modelData
+                    spacing: 8
+
+                    Image {
+                        source: modelData.icon
+                        sourceSize.width: 15
+                        sourceSize.height: 15
+                        Layout.preferredWidth: 15
+                        Layout.preferredHeight: 15
+                        fillMode: Image.PreserveAspectFit
+                        opacity: 0.8
+                    }
+
+                    Text {
+                        text: modelData.label
+                        font.family: Theme.fontSans
+                        font.pixelSize: Typography.small
+                        color: Theme.textMuted
+                    }
                 }
-                onClicked: navVM.navigateToDashboard()
             }
         }
     }
 }
-
