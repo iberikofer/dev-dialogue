@@ -205,9 +205,16 @@ qt_add_qml_module(DevDialogue
         qml/components/Toast.qml
         qml/components/ToggleSwitch.qml
         qml/components/UserAvatar.qml
+        qml/components/UserSettingsDialog.qml
 
         # Screens
         qml/views/LandingView.qml
+        qml/views/LoginView.qml
+        qml/views/DashboardView.qml
+        qml/views/SetupView.qml
+        qml/views/ChatRoomView.qml
+        qml/views/ReportView.qml
+        qml/views/AdminView.qml
     RESOURCES
         resources/fonts/Geist-Variable.ttf
         resources/fonts/GeistMono-Variable.ttf
