@@ -108,14 +108,44 @@ if(WIN32)
     target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32)
 endif()
 
+# Design-token singletons (each file also declares `pragma Singleton`).
+set_source_files_properties(
+    qml/styles/Theme.qml
+    qml/styles/Typography.qml
+    qml/styles/Icons.qml
+    qml/styles/I18n.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
+# Bundled icon set (see resources/NOTICE.md).
+file(GLOB DESKTOP_ICON_FILES
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS
+    resources/icons/*.svg
+)
+
 qt_add_qml_module(DevDialogue
     URI "DevDialogue.App"
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+
+        # Design tokens
         qml/styles/Theme.qml
+        qml/styles/Typography.qml
+        qml/styles/Icons.qml
+        qml/styles/I18n.qml
+
+        # Reusable components
         qml/components/Navbar.qml
+
+        # Screens
         qml/views/LandingView.qml
+    RESOURCES
+        resources/fonts/Geist-Variable.ttf
+        resources/fonts/GeistMono-Variable.ttf
+        resources/patterns/dot-grid.svg
+        ${DESKTOP_ICON_FILES}
 )
 
 # ==========================================
