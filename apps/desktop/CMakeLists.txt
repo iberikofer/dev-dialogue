@@ -137,7 +137,40 @@ qt_add_qml_module(DevDialogue
         qml/styles/I18n.qml
 
         # Reusable components
+        qml/components/AlertBox.qml
+        qml/components/AppFooter.qml
+        qml/components/AppText.qml
+        qml/components/Badge.qml
+        qml/components/BrandMark.qml
+        qml/components/DarkCard.qml
+        qml/components/DarkTextArea.qml
+        qml/components/DarkTextField.qml
+        qml/components/DotGrid.qml
+        qml/components/GlowBlob.qml
+        qml/components/GradientText.qml
+        qml/components/Icon.qml
+        qml/components/KpiTile.qml
+        qml/components/LanguageToggle.qml
+        qml/components/MessageBubble.qml
+        qml/components/ModalOverlay.qml
+        qml/components/MonoText.qml
         qml/components/Navbar.qml
+        qml/components/NavLink.qml
+        qml/components/PageScroll.qml
+        qml/components/ProgressRing.qml
+        qml/components/PulseDot.qml
+        qml/components/ScoreGauge.qml
+        qml/components/SegmentedControl.qml
+        qml/components/SelectBox.qml
+        qml/components/SelectCard.qml
+        qml/components/Skeleton.qml
+        qml/components/SoftGlow.qml
+        qml/components/Spinner.qml
+        qml/components/TactileButton.qml
+        qml/components/ThemedScrollBar.qml
+        qml/components/Toast.qml
+        qml/components/ToggleSwitch.qml
+        qml/components/UserAvatar.qml
 
         # Screens
         qml/views/LandingView.qml
