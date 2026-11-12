@@ -44,6 +44,38 @@ else()
     endif()
 endif()
 
+# Screen view models and list models of the UI layer. Shared by the app and
+# the test target.
+set(DESKTOP_UI_VIEWMODEL_SOURCES
+    src/viewmodels/AdminViewModel.cpp
+    src/viewmodels/BackendStatusViewModel.cpp
+    src/viewmodels/ChatViewModel.cpp
+    src/viewmodels/DashboardViewModel.cpp
+    src/viewmodels/DemoData.cpp
+    src/viewmodels/FormValidator.cpp
+    src/viewmodels/InterviewListModel.cpp
+    src/viewmodels/MessageListModel.cpp
+    src/viewmodels/QuestionListModel.cpp
+    src/viewmodels/ReportViewModel.cpp
+    src/viewmodels/SettingsViewModel.cpp
+    src/viewmodels/SetupViewModel.cpp
+)
+set(DESKTOP_UI_VIEWMODEL_HEADERS
+    include/viewmodels/AdminViewModel.hpp
+    include/viewmodels/BackendStatusViewModel.hpp
+    include/viewmodels/ChatViewModel.hpp
+    include/viewmodels/DashboardViewModel.hpp
+    include/viewmodels/DemoData.hpp
+    include/viewmodels/FormValidator.hpp
+    include/viewmodels/InterviewListModel.hpp
+    include/viewmodels/MessageListModel.hpp
+    include/viewmodels/QuestionListModel.hpp
+    include/viewmodels/ReportViewModel.hpp
+    include/viewmodels/SettingsViewModel.hpp
+    include/viewmodels/SetupViewModel.hpp
+    include/viewmodels/ViewModelSupport.hpp
+)
+
 add_executable(DevDialogue
     src/main.cpp
     
@@ -78,6 +110,8 @@ add_executable(DevDialogue
     include/viewmodels/AuthViewModel.hpp
     src/viewmodels/NavigationViewModel.cpp
     include/viewmodels/NavigationViewModel.hpp
+    ${DESKTOP_UI_VIEWMODEL_SOURCES}
+    ${DESKTOP_UI_VIEWMODEL_HEADERS}
 )
 
 target_include_directories(DevDialogue PRIVATE
