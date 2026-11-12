@@ -200,6 +200,7 @@ qt_add_qml_module(DevDialogue
         qml/components/Skeleton.qml
         qml/components/SoftGlow.qml
         qml/components/Spinner.qml
+        qml/components/StatusBanner.qml
         qml/components/TactileButton.qml
         qml/components/ThemedScrollBar.qml
         qml/components/Toast.qml
