@@ -18,11 +18,7 @@ BackendStatusViewModel::BackendStatusViewModel(std::shared_ptr<network::ApiClien
         return;
     }
 
-    connect(m_apiClient.get(), &network::ApiClient::onlineStatusChanged, this, [this](bool online) {
-        if (online) {
-            // A fresh outage should announce itself again.
-            setDismissed(false);
-        }
+    connect(m_apiClient.get(), &network::ApiClient::onlineStatusChanged, this, [this](bool) {
         setChecking(false);
         emit statusChanged();
     });
@@ -45,25 +41,10 @@ void BackendStatusViewModel::checkHealth() {
     QTimer::singleShot(CheckingIndicatorMs, this, [this]() { setChecking(false); });
 }
 
-void BackendStatusViewModel::dismissBanner() {
-    setDismissed(true);
-}
-
-void BackendStatusViewModel::reopenBanner() {
-    setDismissed(false);
-}
-
 void BackendStatusViewModel::setChecking(bool checking) {
     if (m_isChecking != checking) {
         m_isChecking = checking;
         emit checkingChanged();
-    }
-}
-
-void BackendStatusViewModel::setDismissed(bool dismissed) {
-    if (m_isDismissed != dismissed) {
-        m_isDismissed = dismissed;
-        emit dismissedChanged();
     }
 }
 

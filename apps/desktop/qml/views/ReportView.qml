@@ -1,385 +1,326 @@
 pragma ComponentBehavior: Bound
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import DevDialogue.App
 
-// Performance scorecard (web PerformanceReport.tsx): score dial with the
-// summary, strengths and growth areas, per-question breakdown and the
-// recommended study links.
-PageScroll {
+// Interview report: the score and the verdict on the left, the evidence
+// (per-question breakdown and study links) on the right.
+AppPage {
     id: page
 
     active: StackLayout.isCurrentItem
-    maxContentWidth: Theme.contentWidthNarrow
     onActiveChanged: if (active) reportVM.load(navVM.activeInterviewId)
+    Connections {
+        target: backendVM
+        function onStatusChanged() {
+            if (backendVM.isOffline && reportVM.loading)
+                reportVM.load(navVM.activeInterviewId)
+        }
+    }
 
     readonly property bool ready: !reportVM.loading && reportVM.hasReport
-    readonly property bool wide: width >= 768
+
+    title: qsTr("Interview report")
+    subtitle: ready ? qsTr("How you did and what to study next.") : qsTr("Preparing the report…")
+    badgeText: ready && reportVM.isDemoData ? qsTr("Demo data") : ""
+    scrollable: true
+
+    actions: [
+        TactileButton {
+            variant: "secondary"
+            text: qsTr("Back to Home")
+            iconLeft: "layout-dashboard"
+            implicitHeight: 40
+            onClicked: navVM.navigateToDashboard()
+        },
+        TactileButton {
+            text: qsTr("New interview")
+            iconLeft: "rotate-ccw"
+            implicitHeight: 40
+            glow: true
+            onClicked: navVM.navigateToSetup()
+        }
+    ]
 
     // ------------------------------------------------------------ Loading
     Item {
         visible: !page.ready
         Layout.fillWidth: true
-        implicitHeight: 384
-
-        ColumnLayout {
+        implicitHeight: 360
+        Spinner {
             anchors.centerIn: parent
-            spacing: 16
-            Spinner {
-                Layout.alignment: Qt.AlignHCenter
-                size: 24
-                color: Theme.blue400
-            }
-            AppText {
-                text: qsTr("Generating and loading report...")
-                color: Theme.zinc400
-            }
+            size: 28
+            color: Theme.blue400
         }
     }
 
-    // --------------------------------------------------------- Score card
-    Rectangle {
+    RowLayout {
         visible: page.ready
         Layout.fillWidth: true
-        implicitHeight: hero.implicitHeight + 64
-        radius: Theme.radiusXl
-        border.width: 1
-        border.color: Theme.borderGlass
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.zinc900 }
-            GradientStop { position: 1.0; color: Theme.zinc950 }
-        }
+        spacing: 20
 
+        // ------------------------------------------------- Left: verdict
         ColumnLayout {
-            id: hero
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 32
-            spacing: 0
+            Layout.preferredWidth: 360
+            Layout.maximumWidth: 360
+            Layout.alignment: Qt.AlignTop
+            spacing: 20
 
-            Badge {
-                Layout.alignment: Qt.AlignHCenter
-                pill: true
-                iconName: "trophy"
-                text: qsTr("Technical Interview Final Evaluation")
-                fontWeight: Typography.semibold
-                horizontalPadding: 12
-                verticalPadding: 5
-            }
-
-            ScoreGauge {
-                id: gauge
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 16
-                score: reportVM.score
-                suffix: qsTr("/ 100 points")
-
-                // Replay the dial each time a report is shown.
-                Connections {
-                    target: page
-                    function onReadyChanged() { if (page.ready) gauge.restart() }
-                }
-            }
-
-            AppText {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 24
+            DarkCard {
                 Layout.fillWidth: true
-                Layout.maximumWidth: 672
-                horizontalAlignment: Text.AlignHCenter
-                text: reportVM.summary
-                color: Theme.zinc300
-                font.pixelSize: Typography.base
-                lineHeight: Typography.leadingRelaxed
-                wrapMode: Text.WordWrap
+                padding: 28
+                fillColor: Theme.alpha(Theme.zinc900, 0.8)
+
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: 18
+
+                    ScoreGauge {
+                        id: gauge
+                        Layout.alignment: Qt.AlignHCenter
+                        score: reportVM.score
+                        suffix: qsTr("/ 100 points")
+                        Connections {
+                            target: page
+                            function onReadyChanged() { if (page.ready) gauge.restart() }
+                        }
+                    }
+                    AppText {
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        text: reportVM.summary
+                        color: Theme.zinc300
+                        lineHeight: Typography.leadingRelaxed
+                        wrapMode: Text.WordWrap
+                    }
+                }
             }
 
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 32
-                spacing: 16
+            component VerdictCard: DarkCard {
+                id: verdict
+                property string heading
+                property string iconName
+                property color tone
+                property color toneText
+                property var items: []
 
-                TactileButton {
-                    text: qsTr("Retake Interview")
-                    iconLeft: "rotate-ccw"
-                    implicitHeight: 42
-                    glow: true
-                    onClicked: navVM.navigateToSetup()
+                Layout.fillWidth: true
+                padding: 22
+                fillColor: Qt.tint(Theme.zinc950, Theme.alpha(tone, 0.06))
+                strokeColor: Theme.alpha(tone, 0.22)
+
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: 12
+
+                    RowLayout {
+                        spacing: 8
+                        Icon { name: verdict.iconName; size: 18; color: verdict.toneText }
+                        AppText {
+                            text: verdict.heading
+                            color: verdict.toneText
+                            font.weight: Typography.bold
+                        }
+                    }
+                    Repeater {
+                        model: verdict.items
+                        RowLayout {
+                            id: point
+                            required property string modelData
+                            Layout.fillWidth: true
+                            spacing: 10
+                            Rectangle {
+                                Layout.alignment: Qt.AlignTop
+                                Layout.topMargin: 7
+                                implicitWidth: 5
+                                implicitHeight: 5
+                                radius: 3
+                                color: verdict.toneText
+                            }
+                            AppText {
+                                Layout.fillWidth: true
+                                text: point.modelData
+                                color: Theme.zinc300
+                                lineHeight: Typography.leadingSnug
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
                 }
-                TactileButton {
-                    variant: "secondary"
-                    text: qsTr("Back to Dashboard")
-                    iconLeft: "layout-dashboard"
-                    implicitHeight: 42
-                    onClicked: navVM.navigateToDashboard()
-                }
+            }
+
+            VerdictCard {
+                heading: qsTr("Strengths")
+                iconName: "circle-check"
+                tone: Theme.emerald500
+                toneText: Theme.emerald400
+                items: reportVM.strengths
+            }
+            VerdictCard {
+                heading: qsTr("Areas to improve")
+                iconName: "triangle-alert"
+                tone: Theme.amber500
+                toneText: Theme.amber400
+                items: reportVM.weaknesses
             }
         }
-    }
 
-    // -------------------------------------------- Strengths / growth areas
-    GridLayout {
-        id: verdictGrid
-        visible: page.ready
-        Layout.fillWidth: true
-        Layout.topMargin: 32
-        columns: page.wide ? 2 : 1
-        columnSpacing: 24
-        rowSpacing: 24
-
-        readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
-
-        component VerdictCard: DarkCard {
-            id: verdict
-            property string title
-            property string iconName
-            property color tone
-            property color toneText
-            property color toneDeep
-            property var items: []
-            property real cellWidth: 0
-
+        // ----------------------------------------------- Right: evidence
+        ColumnLayout {
             Layout.fillWidth: true
-            Layout.fillHeight: true
-            Layout.minimumWidth: 0
-            Layout.preferredWidth: cellWidth
-            interactive: true
-            padding: 24
-            fillColor: Qt.tint(Theme.zinc950, Theme.alpha(toneDeep, 0.1))
-            strokeColor: Theme.alpha(tone, 0.2)
+            Layout.alignment: Qt.AlignTop
+            spacing: 20
 
-            ColumnLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                spacing: 12
+            DarkCard {
+                visible: reportVM.questionScores.length > 0
+                Layout.fillWidth: true
+                padding: 22
 
-                RowLayout {
-                    Layout.bottomMargin: 4
-                    spacing: 8
-                    Icon { name: verdict.iconName; size: 20; color: verdict.toneText }
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: 10
+
                     AppText {
-                        text: verdict.title
-                        color: verdict.toneText
+                        Layout.bottomMargin: 4
+                        text: qsTr("Question breakdown")
                         font.pixelSize: Typography.base
                         font.weight: Typography.bold
                     }
-                }
-                Repeater {
-                    model: verdict.items
-                    RowLayout {
-                        id: point
-                        required property string modelData
-                        Layout.fillWidth: true
-                        spacing: 10
 
+                    Repeater {
+                        model: reportVM.questionScores
                         Rectangle {
-                            Layout.alignment: Qt.AlignTop
-                            Layout.topMargin: 8
-                            implicitWidth: 6
-                            implicitHeight: 6
-                            radius: 3
-                            color: verdict.toneText
-                        }
-                        AppText {
+                            id: question
+                            required property var modelData
                             Layout.fillWidth: true
-                            text: point.modelData
-                            color: Theme.zinc300
-                            lineHeight: Typography.leadingSnug
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                }
-            }
-        }
-
-        VerdictCard {
-            title: qsTr("Key Strengths")
-            iconName: "circle-check"
-            tone: Theme.emerald500
-            toneText: Theme.emerald400
-            toneDeep: Theme.emerald950
-            items: reportVM.strengths
-            cellWidth: verdictGrid.cellWidth
-        }
-        VerdictCard {
-            title: qsTr("Areas for Growth (Weaknesses)")
-            iconName: "triangle-alert"
-            tone: Theme.amber500
-            toneText: Theme.amber400
-            toneDeep: Theme.amber950
-            items: reportVM.weaknesses
-            cellWidth: verdictGrid.cellWidth
-        }
-    }
-
-    // ------------------------------------------------- Question breakdown
-    DarkCard {
-        visible: page.ready && reportVM.questionScores.length > 0
-        Layout.fillWidth: true
-        Layout.topMargin: 32
-        padding: 24
-
-        ColumnLayout {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: 12
-
-            AppText {
-                Layout.bottomMargin: 4
-                text: qsTr("Detailed Question Breakdown")
-                font.pixelSize: Typography.lg
-                font.weight: Typography.bold
-            }
-
-            Repeater {
-                model: reportVM.questionScores
-
-                // Click a question to fold or unfold the evaluator comment.
-                Rectangle {
-                    id: question
-                    required property var modelData
-                    property bool expanded: true
-
-                    Layout.fillWidth: true
-                    implicitHeight: questionColumn.implicitHeight + 32
-                    radius: Theme.radiusMd
-                    color: Theme.alpha(Theme.zinc950, 0.6)
-                    border.width: 1
-                    border.color: questionHover.hovered ? Qt.rgba(1, 1, 1, 0.14) : Theme.borderGlass
-                    clip: true
-                    Behavior on implicitHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                    Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
-
-                    HoverHandler { id: questionHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: question.expanded = !question.expanded }
-
-                    ColumnLayout {
-                        id: questionColumn
-                        x: 16
-                        y: 16
-                        width: parent.width - 32
-                        spacing: 8
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 12
-
-                            AppText {
-                                Layout.fillWidth: true
-                                text: question.modelData.question
-                                font.weight: Typography.semibold
-                                wrapMode: Text.WordWrap
-                            }
-                            Badge {
-                                mono: true
-                                text: question.modelData.score + " / 100"
-                                fontWeight: Typography.bold
-                                radius: Theme.radiusSm
-                                horizontalPadding: 10
-                                verticalPadding: 4
-                            }
-                            Icon {
-                                name: "chevron-down"
-                                size: 14
-                                color: Theme.textMuted
-                                rotation: question.expanded ? 180 : 0
-                                Behavior on rotation { NumberAnimation { duration: 200 } }
-                            }
-                        }
-                        AppText {
-                            visible: question.expanded
-                            Layout.fillWidth: true
-                            text: question.modelData.comment
-                            color: Theme.zinc400
-                            font.pixelSize: Typography.xs
-                            lineHeight: Typography.leadingRelaxed
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // ------------------------------------------------ Recommended reading
-    DarkCard {
-        visible: page.ready && reportVM.recommendations.length > 0
-        Layout.fillWidth: true
-        Layout.topMargin: 32
-        padding: 24
-
-        ColumnLayout {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            spacing: 16
-
-            RowLayout {
-                spacing: 8
-                Icon { name: "book-open"; size: 20; color: Theme.blue400 }
-                AppText {
-                    text: qsTr("Recommended Preparation Resources")
-                    font.pixelSize: Typography.lg
-                    font.weight: Typography.bold
-                }
-            }
-
-            GridLayout {
-                id: resourceGrid
-                Layout.fillWidth: true
-                columns: page.width >= 640 ? 2 : 1
-                columnSpacing: 12
-                rowSpacing: 12
-
-                Repeater {
-                    model: reportVM.recommendations
-
-                    DarkCard {
-                        id: resource
-                        required property var modelData
-
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 0
-                        Layout.preferredWidth: (resourceGrid.width - resourceGrid.columnSpacing * (resourceGrid.columns - 1)) / resourceGrid.columns
-                        interactive: true
-                        padding: 16
-                        cardRadius: Theme.radiusMd
-                        fillColor: Theme.alpha(Theme.zinc950, 0.8)
-                        hoverFillColor: Theme.zinc900
-                        hoverStrokeColor: Theme.alpha(Theme.blue500, 0.3)
-
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        TapHandler { onTapped: Qt.openUrlExternally(resource.modelData.resource) }
-
-                        RowLayout {
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            spacing: 8
+                            implicitHeight: questionColumn.implicitHeight + 28
+                            radius: Theme.radiusMd
+                            color: Theme.alpha(Theme.zinc950, 0.6)
+                            border.width: 1
+                            border.color: Theme.borderGlass
 
                             ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-                                AppText {
+                                id: questionColumn
+                                x: 16
+                                y: 14
+                                width: parent.width - 32
+                                spacing: 8
+
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    text: resource.modelData.topic
-                                    color: resource.hovered ? Theme.blue400 : Theme.zinc200
-                                    font.weight: Typography.semibold
-                                    elide: Text.ElideRight
-                                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                                    spacing: 12
+                                    AppText {
+                                        Layout.fillWidth: true
+                                        text: question.modelData.question
+                                        font.weight: Typography.semibold
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    MonoText {
+                                        text: question.modelData.score
+                                        color: Theme.scoreColor(question.modelData.score)
+                                        font.pixelSize: Typography.base
+                                        font.weight: Typography.bold
+                                    }
+                                }
+                                // Score bar
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 4
+                                    radius: 2
+                                    color: Theme.zinc800
+                                    Rectangle {
+                                        width: parent.width * Math.max(0, Math.min(100, question.modelData.score)) / 100
+                                        height: parent.height
+                                        radius: 2
+                                        color: Theme.scoreColor(question.modelData.score)
+                                    }
                                 }
                                 AppText {
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: 280
-                                    text: resource.modelData.resource
-                                    color: Theme.textMuted
+                                    text: question.modelData.comment
+                                    color: Theme.zinc400
                                     font.pixelSize: Typography.xs
-                                    elide: Text.ElideRight
+                                    lineHeight: Typography.leadingRelaxed
+                                    wrapMode: Text.WordWrap
                                 }
                             }
-                            Icon {
-                                name: "external-link"
-                                size: 16
-                                color: resource.hovered ? Theme.blue400 : Theme.textMuted
+                        }
+                    }
+                }
+            }
+
+            DarkCard {
+                visible: reportVM.recommendations.length > 0
+                Layout.fillWidth: true
+                padding: 22
+
+                ColumnLayout {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    spacing: 10
+
+                    RowLayout {
+                        Layout.bottomMargin: 4
+                        spacing: 8
+                        Icon { name: "book-open"; size: 18; color: Theme.blue400 }
+                        AppText {
+                            text: qsTr("What to study next")
+                            font.pixelSize: Typography.base
+                            font.weight: Typography.bold
+                        }
+                    }
+
+                    Repeater {
+                        model: reportVM.recommendations
+                        AbstractButton {
+                            id: resource
+                            required property var modelData
+                            Layout.fillWidth: true
+                            implicitHeight: 56
+                            hoverEnabled: true
+                            onClicked: Qt.openUrlExternally(resource.modelData.resource)
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            ToolTip.visible: hovered
+                            ToolTip.delay: 600
+                            ToolTip.text: qsTr("Open in browser")
+
+                            background: Rectangle {
+                                radius: Theme.radiusMd
+                                color: resource.hovered ? Theme.zinc900 : Theme.alpha(Theme.zinc950, 0.6)
+                                border.width: 1
+                                border.color: resource.hovered ? Theme.alpha(Theme.blue500, 0.35) : Theme.borderGlass
+                            }
+                            contentItem: RowLayout {
+                                spacing: 10
+                                Item { implicitWidth: 6 }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+                                    AppText {
+                                        Layout.fillWidth: true
+                                        text: resource.modelData.topic
+                                        color: resource.hovered ? Theme.blue300 : Theme.zinc200
+                                        font.weight: Typography.semibold
+                                        elide: Text.ElideRight
+                                    }
+                                    AppText {
+                                        Layout.fillWidth: true
+                                        text: resource.modelData.resource
+                                        color: Theme.textMuted
+                                        font.pixelSize: Typography.xs
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                Icon {
+                                    name: "external-link"
+                                    size: 16
+                                    color: resource.hovered ? Theme.blue400 : Theme.textMuted
+                                }
+                                Item { implicitWidth: 6 }
                             }
                         }
                     }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QDateTime>
-#include <QLocale>
 #include <QString>
 #include <functional>
 #include <string>
@@ -36,13 +35,14 @@ inline QDateTime parseTimestamp(const std::string& iso) {
     return parsed;
 }
 
-// "Nov 12, 13:28" in the user's locale and time zone.
+// "12.11.2026  13:28" in the user's time zone. Numeric on purpose: month
+// names would follow the system locale, not the interface language.
 inline QString formatDateTime(const std::string& iso) {
     const QDateTime parsed = parseTimestamp(iso);
     if (!parsed.isValid()) {
         return QString::fromStdString(iso);
     }
-    return QLocale().toString(parsed.toLocalTime(), QStringLiteral("MMM d, HH:mm"));
+    return parsed.toLocalTime().toString(QStringLiteral("dd.MM.yyyy  HH:mm"));
 }
 
 // "13:28" in the user's time zone.

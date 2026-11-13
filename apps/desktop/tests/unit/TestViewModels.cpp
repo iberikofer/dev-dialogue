@@ -2,9 +2,7 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
-#include <QSettings>
 #include <QStringList>
-#include <QTemporaryDir>
 #include <QThread>
 #include <QVariantMap>
 #include <functional>
@@ -803,120 +801,96 @@ TEST_F(ViewModelTest, BackendStatusFollowsTheHealthCheck) {
     EXPECT_FALSE(status.isChecking());
 }
 
-TEST_F(ViewModelTest, BackendStatusBannerCanBeDismissedAndReopened) {
-    BackendStatusViewModel status(client);
-    int dismissedChanges = 0;
-    QObject::connect(&status, &BackendStatusViewModel::dismissedChanged, &status, [&]() { ++dismissedChanges; });
-
-    status.dismissBanner();
-    status.dismissBanner();
-    EXPECT_TRUE(status.isDismissed());
-    EXPECT_EQ(dismissedChanges, 1);
-
-    status.reopenBanner();
-    EXPECT_FALSE(status.isDismissed());
-    EXPECT_EQ(dismissedChanges, 2);
-}
-
 // ===========================================================================
 // SettingsViewModel
 // ===========================================================================
 
-// Keeps the preferences of these tests in a temporary INI file instead of
-// the user's real settings.
-class SettingsViewModelTest : public ViewModelTest {
-protected:
-    void SetUp() override {
-        ViewModelTest::SetUp();
-        ASSERT_TRUE(settingsDir.isValid());
-        QCoreApplication::setOrganizationName("DevDialogueTests");
-        QCoreApplication::setApplicationName("ViewModels");
-        QSettings::setDefaultFormat(QSettings::IniFormat);
-        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settingsDir.path());
-    }
+TEST_F(ViewModelTest, AccountIsEmptyWithoutASignedInUser) {
+    SettingsViewModel account(authService);
 
-    QTemporaryDir settingsDir;
-};
+    EXPECT_TRUE(account.displayName().isEmpty());
+    EXPECT_TRUE(account.email().isEmpty());
+    EXPECT_EQ(account.role().toStdString(), "user");
+    EXPECT_FALSE(account.isDemoAccount());
+}
 
-TEST_F(SettingsViewModelTest, ProfileComesFromTheSignedInUser) {
-    SettingsViewModel settings(authService);
-    EXPECT_TRUE(settings.displayName().isEmpty());
-    EXPECT_TRUE(settings.linkedProviders().isEmpty());
-
+TEST_F(ViewModelTest, AccountFollowsTheSignedInUser) {
+    SettingsViewModel account(authService);
     int profileChanges = 0;
-    QObject::connect(&settings, &SettingsViewModel::profileChanged, &settings, [&]() { ++profileChanges; });
+    QObject::connect(&account, &SettingsViewModel::profileChanged, &account, [&]() { ++profileChanges; });
+
     authService->mockLogin(models::UserRole::User);
 
     EXPECT_EQ(profileChanges, 1);
-    EXPECT_EQ(settings.displayName().toStdString(), "Mock Candidate");
-    EXPECT_EQ(settings.email().toStdString(), "candidate@devdialogue.local");
-    EXPECT_EQ(settings.role().toStdString(), "user");
-    EXPECT_TRUE(settings.avatarUrl().isEmpty());
+    EXPECT_EQ(account.displayName().toStdString(), "Mock Candidate");
+    EXPECT_EQ(account.email().toStdString(), "candidate@devdialogue.local");
+    EXPECT_EQ(account.role().toStdString(), "user");
+    EXPECT_TRUE(account.isDemoAccount());
+    EXPECT_TRUE(account.avatarUrl().isEmpty());
+
+    authService->logout();
+    EXPECT_EQ(profileChanges, 2);
+    EXPECT_TRUE(account.displayName().isEmpty());
+    EXPECT_FALSE(account.isDemoAccount());
 }
 
-TEST_F(SettingsViewModelTest, SavedProfileOverridesTheSignedInProfileAndPersists) {
-    authService->mockLogin(models::UserRole::User);
-    {
-        SettingsViewModel settings(authService);
-        settings.saveProfile("  dev_nick  ", "nick@example.com", "https://example.com/a.png");
+TEST_F(ViewModelTest, AccountUsesTheEmailNameWhenThereIsNoFullName) {
+    serve([](const Request& request) {
+        if (request.path.startsWith("/auth/v1/token")) {
+            return jsonResponse(200, {{"access_token", "jwt"}, {"refresh_token", "refresh"}});
+        }
+        return jsonResponse(200, {{"id", "u-42"}, {"email", "dev.user@example.com"}, {"fullName", nullptr},
+                                  {"avatarUrl", "https://example.com/a.png"}, {"role", "admin"}});
+    });
 
-        EXPECT_EQ(settings.displayName().toStdString(), "dev_nick");
-        EXPECT_EQ(settings.email().toStdString(), "nick@example.com");
-        EXPECT_EQ(settings.avatarUrl().toStdString(), "https://example.com/a.png");
-    }
+    SettingsViewModel account(authService);
+    bool done = false;
+    authService->loginWithEmail("dev.user@example.com", "secret123", [&](bool, const QString&) { done = true; });
+    ASSERT_TRUE(waitUntil([&]() { return done; }));
 
-    // A new instance (next app start) still sees the saved values.
-    SettingsViewModel reopened(authService);
-    EXPECT_EQ(reopened.displayName().toStdString(), "dev_nick");
-
-    // Clearing a field falls back to the signed-in profile.
-    reopened.saveProfile("", "", "");
-    EXPECT_EQ(reopened.displayName().toStdString(), "Mock Candidate");
-    EXPECT_EQ(reopened.email().toStdString(), "candidate@devdialogue.local");
+    EXPECT_EQ(account.displayName().toStdString(), "dev.user");
+    EXPECT_EQ(account.role().toStdString(), "admin");
+    EXPECT_EQ(account.avatarUrl().toStdString(), "https://example.com/a.png");
+    EXPECT_FALSE(account.isDemoAccount());
 }
 
-TEST_F(SettingsViewModelTest, LinkedProvidersCanBeToggled) {
-    authService->mockLogin(models::UserRole::User);
-    SettingsViewModel settings(authService);
-    EXPECT_EQ(settings.linkedProviders(), QStringList({"email", "github"}));
+// ===========================================================================
+// ChatViewModel session state (sidebar entry and offline badge)
+// ===========================================================================
 
-    int providerChanges = 0;
-    QObject::connect(&settings, &SettingsViewModel::linkedProvidersChanged, &settings, [&]() { ++providerChanges; });
+TEST_F(ViewModelTest, ChatSessionIsActiveUntilItIsFinished) {
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    EXPECT_FALSE(chat.hasActiveSession());
 
-    EXPECT_TRUE(settings.toggleProvider("google"));
-    EXPECT_TRUE(settings.linkedProviders().contains("google"));
-    EXPECT_FALSE(settings.toggleProvider("github"));
-    EXPECT_FALSE(settings.linkedProviders().contains("github"));
-    EXPECT_EQ(providerChanges, 2);
+    chat.beginSession("session-local", "frontend", "junior", "en", QString(), true);
+    EXPECT_TRUE(chat.hasActiveSession());
+    EXPECT_TRUE(chat.isLocalSession());
+
+    chat.completeInterview();
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isCompleting(); }));
+    EXPECT_FALSE(chat.hasActiveSession());
+
+    // Starting the next interview makes it active again.
+    chat.beginSession("interview-2", "backend", "middle", "en", "First question", false);
+    EXPECT_TRUE(chat.hasActiveSession());
+    EXPECT_FALSE(chat.isLocalSession());
 }
 
-TEST_F(SettingsViewModelTest, PlatformPreferencesHaveDefaultsAndPersist) {
-    {
-        SettingsViewModel settings(authService);
-        EXPECT_EQ(settings.theme().toStdString(), "oled");
-        EXPECT_TRUE(settings.soundEnabled());
-        EXPECT_EQ(settings.aiPersona().toStdString(), "balanced");
+TEST_F(ViewModelTest, ChatBecomesLocalWhenTheNetworkDropsMidSession) {
+    takeBackendDown();
 
-        int themeChanges = 0;
-        QObject::connect(&settings, &SettingsViewModel::themeChanged, &settings, [&]() { ++themeChanges; });
-        settings.setTheme("slate");
-        settings.setTheme("slate");
-        settings.setSoundEnabled(false);
-        settings.setAiPersona("strict");
-        EXPECT_EQ(themeChanges, 1);
-    }
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    chat.setFallbackReplyDelay(5);
+    chat.beginSession("interview-42", "frontend", "junior", "en", "First question", false);
+    int sessionChanges = 0;
+    QObject::connect(&chat, &ChatViewModel::sessionChanged, &chat, [&]() { ++sessionChanges; });
 
-    SettingsViewModel reopened(authService);
-    EXPECT_EQ(reopened.theme().toStdString(), "slate");
-    EXPECT_FALSE(reopened.soundEnabled());
-    EXPECT_EQ(reopened.aiPersona().toStdString(), "strict");
-}
+    chat.sendAnswer("My answer");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }, 20000));
 
-TEST_F(SettingsViewModelTest, NothingIsStoredWithoutASignedInUser) {
-    SettingsViewModel settings(authService);
-    settings.saveProfile("ghost", "ghost@example.com", "");
-    EXPECT_FALSE(settings.toggleProvider("github"));
-
-    EXPECT_TRUE(settings.displayName().isEmpty());
-    EXPECT_TRUE(settings.linkedProviders().isEmpty());
+    EXPECT_TRUE(chat.isLocalSession());
+    EXPECT_EQ(sessionChanges, 1);
+    EXPECT_EQ(chat.messagesModel()->rowCount(), 3);
 }

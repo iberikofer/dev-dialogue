@@ -49,6 +49,7 @@ void ChatViewModel::openSession(const QString& interviewId) {
 
     if (!m_interviewService || !backendLikelyOnline()) {
         m_offline = true;
+        emit sessionChanged();
         appendWelcome();
         return;
     }
@@ -74,6 +75,7 @@ void ChatViewModel::openSession(const QString& interviewId) {
                 return;
             }
             self->m_offline = true;
+            emit self->sessionChanged();
             self->appendWelcome();
         });
 }
@@ -111,8 +113,9 @@ void ChatViewModel::sendAnswer(const QString& text) {
             }
             // Keep the conversation going without the backend; once the
             // network is down the rest of the session stays local.
-            if (std::get<models::ApiError>(result).isNetworkDown) {
+            if (std::get<models::ApiError>(result).isNetworkDown && !self->m_offline) {
                 self->m_offline = true;
+                emit self->sessionChanged();
             }
             self->scheduleFallbackReply(answersBefore);
         });
@@ -134,6 +137,8 @@ void ChatViewModel::completeInterview() {
             return;
         }
         self->setCompleting(false);
+        self->m_completed = true;
+        emit self->sessionChanged();
         emit self->interviewCompleted(interviewId);
         if (self->m_navigation) {
             self->m_navigation->navigateToReport(interviewId);
@@ -156,6 +161,7 @@ void ChatViewModel::resetSession(const QString& interviewId, const QString& dire
     m_level = level;
     m_language = language;
     m_offline = offline;
+    m_completed = false;
     emit sessionChanged();
 
     m_messages.clear();

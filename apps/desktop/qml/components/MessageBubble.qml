@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import DevDialogue.App
 
 // One chat message. The interviewer sits on the left in a dark bubble with
-// a bot avatar, the candidate on the right in the rose > pink > indigo
+// a bot avatar, the candidate on the right in the blue accent
 // gradient bubble with a user avatar.
 Item {
     id: root
@@ -50,7 +50,7 @@ Item {
                 anchors.centerIn: parent
                 name: root.isAssistant ? "bot" : "user"
                 size: 16
-                color: root.isAssistant ? Theme.rose300 : Theme.blue400
+                color: root.isAssistant ? Theme.sky300 : Theme.blue300
             }
         }
 
@@ -70,9 +70,9 @@ Item {
                 visible: !root.isAssistant
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
-                    GradientStop { position: 0.0; color: Theme.rose500 }
-                    GradientStop { position: 0.5; color: Theme.pink500 }
-                    GradientStop { position: 1.0; color: Theme.indigo600 }
+                    GradientStop { position: 0.0; color: Theme.blue600 }
+                    GradientStop { position: 0.5; color: Theme.blue500 }
+                    GradientStop { position: 1.0; color: Theme.indigo500 }
                 }
             }
 
@@ -94,7 +94,7 @@ Item {
                 MonoText {
                     id: time
                     text: root.timestamp
-                    color: root.isAssistant ? Theme.textMuted : Theme.alpha(Theme.rose100, 0.8)
+                    color: root.isAssistant ? Theme.textMuted : Theme.alpha(Theme.blue100, 0.75)
                     font.pixelSize: Typography.micro
                 }
             }

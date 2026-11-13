@@ -27,6 +27,10 @@ class ChatViewModel : public QObject, public support::BackendAware {
     Q_PROPERTY(bool isCompleting READ isCompleting NOTIFY completingChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
     Q_PROPERTY(QString elapsedText READ elapsedText NOTIFY elapsedChanged)
+    // True for a session that runs locally without the backend.
+    Q_PROPERTY(bool isLocalSession READ isLocalSession NOTIFY sessionChanged)
+    // A session is open and not finished yet (drives the sidebar entry).
+    Q_PROPERTY(bool hasActiveSession READ hasActiveSession NOTIFY sessionChanged)
 
 public:
     explicit ChatViewModel(std::shared_ptr<services::InterviewService> interviewService,
@@ -43,6 +47,8 @@ public:
     QString errorMessage() const { return m_errorMessage; }
     // Session time as "mm:ss".
     QString elapsedText() const;
+    bool isLocalSession() const { return m_offline; }
+    bool hasActiveSession() const { return !m_interviewId.isEmpty() && !m_completed; }
 
     // Posts the candidate's answer and appends the interviewer's reply. If
     // the backend is unreachable a scripted demo reply is used instead.
@@ -96,6 +102,7 @@ private:
     int m_elapsedSeconds{0};
     int m_fallbackReplyDelayMs{900};
     bool m_offline{false};
+    bool m_completed{false};
     bool m_isBusy{false};
     bool m_isCompleting{false};
 };

@@ -4,84 +4,59 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import DevDialogue.App
 
-// Candidate dashboard (web DashboardView.tsx): welcome header, three KPI
-// tiles and the interview history table.
-PageScroll {
+// Home: today's numbers and the interview history. The history table fills
+// the window and scrolls on its own.
+AppPage {
     id: page
 
     active: StackLayout.isCurrentItem
-    maxContentWidth: Theme.contentWidthDefault
-    onActiveChanged: if (active) dashboardVM.refresh()
 
-    readonly property bool wide: width >= 720
-    readonly property int rowHeight: 53
-    readonly property int maxVisibleRows: 8
+    // Load when the page is shown to a signed-in user; if the server turns
+    // out to be unreachable meanwhile, switch to demo data at once instead of
+    // waiting for the request to time out.
+    readonly property bool live: active && authVM.isAuthenticated
+    onLiveChanged: if (live) dashboardVM.refresh()
+    Connections {
+        target: backendVM
+        function onStatusChanged() {
+            if (backendVM.isOffline && dashboardVM.loading)
+                dashboardVM.refresh()
+        }
+    }
+
+    title: qsTr("Welcome back, %1").arg(settingsVM.displayName)
+    subtitle: qsTr("Your interview practice at a glance.")
+    badgeText: dashboardVM.isDemoData ? qsTr("Demo data") : ""
+
+    actions: [
+        TactileButton {
+            text: qsTr("New interview")
+            iconLeft: "circle-plus"
+            implicitHeight: 40
+            glow: true
+            onClicked: navVM.navigateToSetup()
+            ToolTip.visible: hovered
+            ToolTip.delay: 600
+            ToolTip.text: "Ctrl+N"
+        }
+    ]
+
+    readonly property int rowHeight: 52
     // Column widths as fractions of the table width.
     readonly property var columns: [0.22, 0.18, 0.15, 0.17, 0.12, 0.16]
-
     function columnWidth(index, tableWidth) {
         return Math.floor((tableWidth - 48) * columns[index])
     }
 
-    // ------------------------------------------------------------ Welcome
+    // ------------------------------------------------------------ KPI tiles
     RowLayout {
         Layout.fillWidth: true
         spacing: 16
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 4
-
-            AppText {
-                Layout.fillWidth: true
-                text: qsTr("Welcome, %1").arg(authVM.isAuthenticated && settingsVM.displayName !== ""
-                                              ? settingsVM.displayName : qsTr("Candidate")) + " 👋"
-                font.pixelSize: page.wide ? Typography.xl3 : Typography.xl2
-                font.weight: Typography.bold
-                font.letterSpacing: Typography.tracking((page.wide ? Typography.xl3 : Typography.xl2), Typography.trackingTight)
-                elide: Text.ElideRight
-            }
-            AppText {
-                Layout.fillWidth: true
-                text: qsTr("Your personal technical interview preparation command center.")
-                color: Theme.zinc400
-                wrapMode: Text.WordWrap
-            }
-        }
-
-        TactileButton {
-            text: qsTr("Start New Interview")
-            iconLeft: "circle-plus"
-            implicitHeight: 42
-            glow: true
-            onClicked: navVM.navigateToSetup()
-        }
-    }
-
-    Rectangle {
-        Layout.fillWidth: true
-        Layout.topMargin: 24
-        Layout.bottomMargin: 32
-        implicitHeight: 1
-        color: Theme.borderGlass
-    }
-
-    // ---------------------------------------------------------- KPI tiles
-    GridLayout {
-        id: kpiGrid
-        Layout.fillWidth: true
-        Layout.bottomMargin: 32
-        columns: page.wide ? 3 : 1
-        columnSpacing: 16
-        rowSpacing: 16
-
-        readonly property real cellWidth: (width - columnSpacing * (columns - 1)) / columns
-
         KpiTile {
             Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            Layout.preferredWidth: kpiGrid.cellWidth
-            caption: qsTr("Interviews Completed")
+            Layout.preferredWidth: 1
+            caption: qsTr("Interviews completed")
             description: qsTr("Total evaluated sessions")
             iconName: "history"
             iconColor: Theme.blue400
@@ -91,10 +66,9 @@ PageScroll {
         }
         KpiTile {
             Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            Layout.preferredWidth: kpiGrid.cellWidth
-            caption: qsTr("Average Score")
-            description: qsTr("Assessed by AI evaluation models")
+            Layout.preferredWidth: 1
+            caption: qsTr("Average score")
+            description: qsTr("Across all evaluated sessions")
             iconName: "trending-up"
             iconColor: Theme.emerald400
             valueColor: Theme.emerald400
@@ -104,10 +78,9 @@ PageScroll {
         }
         KpiTile {
             Layout.fillWidth: true
-            Layout.minimumWidth: 0
-            Layout.preferredWidth: kpiGrid.cellWidth
-            caption: qsTr("Daily Limit")
-            description: qsTr("Remaining sessions today")
+            Layout.preferredWidth: 1
+            caption: qsTr("Left today")
+            description: qsTr("Interviews you can still start today")
             iconName: "clock"
             iconColor: Theme.blue400
             value: dashboardVM.remainingToday
@@ -124,19 +97,19 @@ PageScroll {
         }
     }
 
-    // ------------------------------------------------------ History table
+    // ------------------------------------------------------- History table
     Rectangle {
         id: table
         Layout.fillWidth: true
-        implicitHeight: tableColumn.implicitHeight
+        Layout.fillHeight: true
         radius: Theme.radiusLg
         color: Theme.surfaceCard
         border.width: 1
         border.color: Theme.borderGlass
+        clip: true
 
         ColumnLayout {
-            id: tableColumn
-            width: parent.width
+            anchors.fill: parent
             spacing: 0
 
             RowLayout {
@@ -147,15 +120,9 @@ PageScroll {
 
                 AppText {
                     Layout.fillWidth: true
-                    text: qsTr("Interview History")
+                    text: qsTr("Interview history")
                     font.pixelSize: Typography.base
                     font.weight: Typography.bold
-                }
-                Skeleton {
-                    visible: dashboardVM.loading
-                    Layout.preferredWidth: 48
-                    Layout.preferredHeight: 12
-                    radius: 4
                 }
                 MonoText {
                     visible: !dashboardVM.loading
@@ -164,64 +131,82 @@ PageScroll {
             }
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.borderGlass }
 
-            // Loading skeleton rows
+            // Loading
             ColumnLayout {
                 visible: dashboardVM.loading
                 Layout.fillWidth: true
                 Layout.margins: 24
-                spacing: 16
-
+                spacing: 24
                 Repeater {
-                    model: 3
+                    model: 4
                     RowLayout {
                         Layout.fillWidth: true
-                        Layout.topMargin: 8
-                        Layout.bottomMargin: 8
                         spacing: 16
-                        Skeleton { Layout.preferredWidth: 112; Layout.preferredHeight: 16; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 112; Layout.preferredHeight: 14; radius: 4 }
                         Item { Layout.fillWidth: true }
-                        Skeleton { Layout.preferredWidth: 96; Layout.preferredHeight: 16; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 96; Layout.preferredHeight: 14; radius: 4 }
                         Item { Layout.fillWidth: true }
-                        Skeleton { Layout.preferredWidth: 64; Layout.preferredHeight: 16; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 64; Layout.preferredHeight: 14; radius: 4 }
                         Item { Layout.fillWidth: true }
-                        Skeleton { Layout.preferredWidth: 56; Layout.preferredHeight: 16; radius: 4 }
-                        Item { Layout.fillWidth: true }
-                        Skeleton { Layout.preferredWidth: 80; Layout.preferredHeight: 16; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 80; Layout.preferredHeight: 14; radius: 4 }
                     }
                 }
+                Item { Layout.fillHeight: true }
             }
 
-            // Empty state
-            AppText {
+            // Empty: a direct way to start
+            ColumnLayout {
                 visible: !dashboardVM.loading && dashboardVM.interviewCount === 0
                 Layout.fillWidth: true
-                Layout.margins: 32
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("No completed interviews found yet. Click \"Start New Interview\" to begin your practice!")
-                color: Theme.zinc400
-                wrapMode: Text.WordWrap
+                Layout.fillHeight: true
+                spacing: 14
+
+                Item { Layout.fillHeight: true }
+                Icon {
+                    Layout.alignment: Qt.AlignHCenter
+                    name: "history"
+                    size: 32
+                    color: Theme.zinc600
+                }
+                AppText {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: qsTr("No interviews yet")
+                    font.pixelSize: Typography.base
+                    font.weight: Typography.semibold
+                }
+                AppText {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: qsTr("Finished interviews and their scores will appear here.")
+                    color: Theme.zinc400
+                }
+                TactileButton {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 6
+                    text: qsTr("Start your first interview")
+                    iconLeft: "circle-plus"
+                    onClicked: navVM.navigateToSetup()
+                }
+                Item { Layout.fillHeight: true }
             }
 
             // Column headers
             Rectangle {
                 visible: !dashboardVM.loading && dashboardVM.interviewCount > 0
                 Layout.fillWidth: true
-                implicitHeight: 41
+                implicitHeight: 40
                 color: Theme.alpha(Theme.zinc950, 0.6)
 
                 Row {
                     x: 24
                     height: parent.height
-
                     Repeater {
-                        model: [qsTr("Date"), qsTr("Track"), qsTr("Level"), qsTr("Status"), qsTr("Score"), qsTr("Report")]
+                        model: [qsTr("Date"), qsTr("Track"), qsTr("Level"), qsTr("Status"), qsTr("Score"), ""]
                         AppText {
                             required property string modelData
                             required property int index
                             width: page.columnWidth(index, table.width)
                             height: parent.height
                             verticalAlignment: Text.AlignVCenter
-                            horizontalAlignment: index === 5 ? Text.AlignRight : Text.AlignLeft
                             text: modelData
                             color: Theme.zinc400
                             font.pixelSize: Typography.xs
@@ -234,21 +219,18 @@ PageScroll {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.borderGlass }
             }
 
-            // Rows. The list is virtualised and scrolls on its own once the
-            // history is longer than a screenful.
+            // Rows: the whole row opens the report or resumes the session.
             ListView {
                 id: rows
                 visible: !dashboardVM.loading && dashboardVM.interviewCount > 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(count, page.maxVisibleRows) * page.rowHeight
-                Layout.bottomMargin: 1
+                Layout.fillHeight: true
                 clip: true
-                interactive: count > page.maxVisibleRows
                 boundsBehavior: Flickable.StopAtBounds
                 model: dashboardVM.interviews
                 ScrollBar.vertical: ThemedScrollBar {}
 
-                delegate: Rectangle {
+                delegate: AbstractButton {
                     id: row
                     required property int index
                     required property string interviewId
@@ -261,100 +243,94 @@ PageScroll {
 
                     width: rows.width
                     height: page.rowHeight
-                    color: rowHover.hovered ? Theme.alpha(Theme.zinc800, 0.3) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-                    HoverHandler { id: rowHover }
-
-                    Rectangle {
-                        visible: row.index > 0
-                        width: parent.width
-                        height: 1
-                        color: Theme.borderFaint
+                    hoverEnabled: true
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    onClicked: {
+                        if (row.isCompleted) {
+                            navVM.navigateToReport(row.interviewId)
+                        } else {
+                            chatVM.openSession(row.interviewId)
+                            navVM.navigateToChat(row.interviewId)
+                        }
                     }
 
-                    Row {
-                        x: 24
-                        height: parent.height
+                    background: Rectangle {
+                        color: row.hovered ? Theme.alpha(Theme.zinc800, 0.35) : "transparent"
+                        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                        Rectangle {
+                            visible: row.index > 0
+                            width: parent.width
+                            height: 1
+                            color: Theme.borderFaint
+                        }
+                    }
+
+                    contentItem: Row {
+                        leftPadding: 24
 
                         MonoText {
                             width: page.columnWidth(0, table.width)
-                            height: parent.height
+                            height: row.height
                             verticalAlignment: Text.AlignVCenter
                             text: row.dateText
                             elide: Text.ElideRight
                         }
                         AppText {
                             width: page.columnWidth(1, table.width)
-                            height: parent.height
+                            height: row.height
                             verticalAlignment: Text.AlignVCenter
-                            text: row.direction
+                            text: row.direction === "qa" || row.direction === "pm" ? row.direction.toUpperCase() : row.direction
                             font.weight: Typography.medium
-                            font.capitalization: Font.Capitalize
+                            font.capitalization: row.direction === "qa" || row.direction === "pm" ? Font.MixedCase : Font.Capitalize
                             elide: Text.ElideRight
                         }
                         AppText {
                             width: page.columnWidth(2, table.width)
-                            height: parent.height
+                            height: row.height
                             verticalAlignment: Text.AlignVCenter
                             text: row.level
                             color: Theme.zinc300
-                            font.pixelSize: Typography.xs
                             font.capitalization: Font.Capitalize
                             elide: Text.ElideRight
                         }
                         Item {
                             width: page.columnWidth(3, table.width)
-                            height: parent.height
+                            height: row.height
                             Badge {
                                 anchors.verticalCenter: parent.verticalCenter
                                 tone: row.isCompleted ? "emerald" : "blue"
-                                text: row.isCompleted ? qsTr("Completed") : qsTr("Active")
+                                text: row.isCompleted ? qsTr("Completed") : qsTr("In progress")
                             }
                         }
                         MonoText {
                             width: page.columnWidth(4, table.width)
-                            height: parent.height
+                            height: row.height
                             verticalAlignment: Text.AlignVCenter
                             text: row.hasScore ? row.score + "%" : "—"
-                            color: Theme.zinc100
+                            color: row.hasScore ? Theme.scoreColor(row.score) : Theme.textMuted
                             font.pixelSize: Typography.sm
                             font.weight: Typography.bold
                         }
                         Item {
                             width: page.columnWidth(5, table.width)
-                            height: parent.height
-
+                            height: row.height
                             Row {
-                                id: action
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                spacing: 4
-                                scale: actionTap.pressed ? 0.97 : 1.0
-
+                                spacing: 6
+                                opacity: row.hovered ? 1 : 0.7
                                 AppText {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: row.isCompleted ? qsTr("View Report") : qsTr("Resume")
-                                    color: actionHover.hovered ? Theme.blue300 : Theme.blue400
+                                    text: row.isCompleted ? qsTr("Open report") : qsTr("Resume")
+                                    color: Theme.blue400
                                     font.pixelSize: Typography.xs
                                     font.weight: Typography.semibold
                                 }
                                 Icon {
                                     anchors.verticalCenter: parent.verticalCenter
-                                    name: row.isCompleted ? "external-link" : "circle-play"
-                                    size: 12
-                                    color: actionHover.hovered ? Theme.blue300 : Theme.blue400
-                                }
-                                HoverHandler { id: actionHover; cursorShape: Qt.PointingHandCursor }
-                                TapHandler {
-                                    id: actionTap
-                                    onTapped: {
-                                        if (row.isCompleted) {
-                                            navVM.navigateToReport(row.interviewId)
-                                        } else {
-                                            chatVM.openSession(row.interviewId)
-                                            navVM.navigateToChat(row.interviewId)
-                                        }
-                                    }
+                                    name: "chevron-right"
+                                    size: 14
+                                    color: Theme.blue400
                                 }
                             }
                         }

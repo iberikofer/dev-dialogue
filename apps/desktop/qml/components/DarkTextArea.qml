@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import DevDialogue.App
 
-// Multi-line input. "chat" matches the interview answer box (rose focus
+// Multi-line input. "chat" is the interview answer box (accent focus
 // ring), "solid" matches the admin dialog textarea.
 ScrollView {
     id: root
@@ -16,7 +16,7 @@ ScrollView {
     signal submitted()
 
     readonly property bool solid: appearance === "solid"
-    readonly property color focusColor: solid ? Theme.blue500 : Theme.rose500
+    readonly property color focusColor: Theme.blue500
 
     implicitHeight: solid ? 76 : 76
     clip: true

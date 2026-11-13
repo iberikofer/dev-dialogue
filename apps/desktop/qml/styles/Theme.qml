@@ -118,7 +118,9 @@ QtObject {
     readonly property int radiusLg: 16     // rounded-2xl
     readonly property int radiusXl: 24     // rounded-3xl
 
-    readonly property int navbarHeight: 64
+    readonly property int sidebarExpanded: 232
+    readonly property int sidebarCollapsed: 72
+    readonly property int windowGap: 12
     readonly property int pageGutter: 32
     readonly property int contentWidthWide: 1280    // max-w-7xl
     readonly property int contentWidthDefault: 1152 // max-w-6xl

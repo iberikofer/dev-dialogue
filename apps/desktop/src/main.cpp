@@ -1,4 +1,5 @@
 #include <QGuiApplication>
+#include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickStyle>
@@ -36,6 +37,8 @@ int main(int argc, char *argv[]) {
   app.setApplicationName(QString::fromUtf8(core::constants::AppName.data()));
   app.setApplicationVersion(
       QString::fromUtf8(core::constants::AppVersion.data()));
+
+  app.setWindowIcon(QIcon(QStringLiteral(":/DevDialogue/App/resources/app/app-icon.png")));
 
   QQuickStyle::setStyle("Basic");
 

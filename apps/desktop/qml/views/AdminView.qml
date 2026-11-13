@@ -4,25 +4,21 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import DevDialogue.App
 
-// Question bank administration (web AdminPanel.tsx). Only reachable for
-// administrators with the admin view switched on; everyone else sees the
-// access notice.
-PageScroll {
+// Question bank administration. Reachable from the sidebar only for
+// administrators with the admin view switched on.
+AppPage {
     id: page
 
     active: StackLayout.isCurrentItem
-    maxContentWidth: Theme.contentWidthDefault
 
     readonly property bool hasAccess: authVM.isAdmin && authVM.isAdminViewActive
-    readonly property bool wide: width >= 720
-    readonly property int rowHeight: 64
-    readonly property int maxVisibleRows: 8
-    readonly property var columns: [0.13, 0.10, 0.20, 0.34, 0.14, 0.09]
+    readonly property int rowHeight: 60
+    readonly property var columns: [0.13, 0.10, 0.20, 0.35, 0.14, 0.08]
     readonly property var trackFilters: [
-        { value: "", label: qsTr("All Tracks") },
-        { value: "frontend", label: "FRONTEND" },
-        { value: "backend", label: "BACKEND" },
-        { value: "devops", label: "DEVOPS" },
+        { value: "", label: qsTr("All tracks") },
+        { value: "frontend", label: "Frontend" },
+        { value: "backend", label: "Backend" },
+        { value: "devops", label: "DevOps" },
         { value: "qa", label: "QA" },
         { value: "pm", label: "PM" }
     ]
@@ -40,229 +36,116 @@ PageScroll {
 
     onActiveChanged: reload()
     onHasAccessChanged: reload()
-
-    // ------------------------------------------------- Access restricted
-    ColumnLayout {
-        visible: !page.hasAccess
-        Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: 48
-        Layout.fillWidth: true
-        Layout.maximumWidth: 672
-        spacing: 0
-
-        Rectangle {
-            Layout.alignment: Qt.AlignHCenter
-            implicitWidth: 56
-            implicitHeight: 56
-            radius: Theme.radiusLg
-            color: Theme.alpha(Theme.amber500, 0.1)
-            border.width: 1
-            border.color: Theme.alpha(Theme.amber500, 0.2)
-            Icon { anchors.centerIn: parent; name: "shield-alert"; size: 28; color: Theme.amber400 }
-        }
-        AppText {
-            Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 16
-            text: qsTr("Access Restricted")
-            color: Theme.textOnAccent
-            font.pixelSize: Typography.xl2
-            font.weight: Typography.bold
-        }
-        AppText {
-            Layout.topMargin: 8
-            Layout.fillWidth: true
-            horizontalAlignment: Text.AlignHCenter
-            text: qsTr("Administrator role with active admin view mode is required to access the Question Bank.")
-            color: Theme.zinc400
-            wrapMode: Text.WordWrap
+    Connections {
+        target: backendVM
+        function onStatusChanged() {
+            if (backendVM.isOffline && adminVM.loading)
+                adminVM.refresh()
         }
     }
 
-    // ------------------------------------------------------------- Header
-    RowLayout {
-        visible: page.hasAccess
-        Layout.fillWidth: true
-        spacing: 16
+    title: qsTr("Question bank")
+    subtitle: qsTr("%1 questions  ·  questions the interviewer draws from").arg(adminVM.totalCount)
+    badgeText: adminVM.isDemoData ? qsTr("Demo data") : ""
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Badge {
-                pill: true
-                iconName: "shield-alert"
-                text: qsTr("Administrator Panel")
-                fontWeight: Typography.semibold
-                horizontalPadding: 12
-                verticalPadding: 5
-            }
-            AppText {
-                Layout.fillWidth: true
-                text: qsTr("Manage Question Bank, difficulty parameters, and session telemetry.")
-                color: Theme.textOnAccent
-                font.pixelSize: page.wide ? Typography.xl3 : Typography.xl2
-                font.weight: Typography.bold
-                font.letterSpacing: Typography.tracking(Typography.xl3, Typography.trackingTight)
-                lineHeight: Typography.leadingSnug
-                wrapMode: Text.WordWrap
-            }
-        }
-
+    actions: [
         TactileButton {
-            text: qsTr("Add Question")
+            visible: page.hasAccess
+            text: qsTr("Add question")
             iconLeft: "plus"
-            implicitHeight: 42
+            implicitHeight: 40
             glow: true
             onClicked: page.openAddDialog()
         }
-    }
-    Rectangle {
-        visible: page.hasAccess
+    ]
+
+    // Only shown if the role changes while the page is open.
+    AppText {
+        visible: !page.hasAccess
         Layout.fillWidth: true
-        Layout.topMargin: 24
-        Layout.bottomMargin: 32
-        implicitHeight: 1
-        color: Theme.borderGlass
+        text: qsTr("The question bank is available to administrators in admin view.")
+        color: Theme.zinc400
     }
 
-    // ------------------------------------------------------ Track filter
+    // ---------------------------------------------------------- Filter
     RowLayout {
         visible: page.hasAccess
         Layout.fillWidth: true
-        Layout.bottomMargin: 24
-        spacing: 12
+        spacing: 8
 
-        Icon { name: "filter"; size: 16; color: Theme.zinc400 }
-        MonoText {
-            text: qsTr("Track Filter:")
-            caps: true
-            font.weight: Typography.semibold
-        }
-        Flow {
-            Layout.fillWidth: true
-            spacing: 8
+        Repeater {
+            model: page.trackFilters
+            AbstractButton {
+                id: chip
+                required property var modelData
+                readonly property bool selected: adminVM.directionFilter === modelData.value
 
-            Repeater {
-                model: page.trackFilters
+                implicitHeight: 32
+                implicitWidth: chipText.implicitWidth + 28
+                hoverEnabled: true
+                onClicked: adminVM.directionFilter = modelData.value
+                HoverHandler { cursorShape: Qt.PointingHandCursor }
 
-                AbstractButton {
-                    id: chip
-                    required property var modelData
-                    readonly property bool selected: adminVM.directionFilter === modelData.value
-
-                    implicitHeight: 26
-                    implicitWidth: chipText.implicitWidth + 24
-                    hoverEnabled: true
-                    onClicked: adminVM.directionFilter = modelData.value
-                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    scale: down ? 0.97 : 1.0
-                    Behavior on scale { NumberAnimation { duration: Theme.durationFast } }
-
-                    background: Rectangle {
-                        radius: Theme.radiusSm
-                        color: chip.selected ? Theme.primary : (chip.hovered ? Theme.zinc700 : Theme.zinc800)
-                        border.width: chip.visualFocus ? 2 : 0
-                        border.color: Theme.focusRing
-                        Behavior on color { ColorAnimation { duration: Theme.durationFast } }
-                    }
-                    contentItem: Item {
-                        AppText {
-                            id: chipText
-                            anchors.centerIn: parent
-                            text: chip.modelData.label
-                            color: chip.selected ? Theme.textOnAccent : Theme.zinc300
-                            font.pixelSize: Typography.xs
-                            font.weight: Typography.medium
-                        }
+                background: Rectangle {
+                    radius: height / 2
+                    color: chip.selected ? Theme.alpha(Theme.blue600, 0.25) : (chip.hovered ? Theme.zinc800 : "transparent")
+                    border.width: 1
+                    border.color: chip.selected ? Theme.alpha(Theme.blue400, 0.5) : (chip.visualFocus ? Theme.focusRing : Theme.borderStrong)
+                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                }
+                contentItem: Item {
+                    AppText {
+                        id: chipText
+                        anchors.centerIn: parent
+                        text: chip.modelData.label
+                        color: chip.selected ? Theme.blue200 : Theme.zinc300
+                        font.pixelSize: Typography.xs
+                        font.weight: Typography.medium
                     }
                 }
             }
         }
+        Item { Layout.fillWidth: true }
     }
 
     AlertBox {
         visible: page.hasAccess && adminVM.errorMessage !== ""
         Layout.fillWidth: true
-        Layout.bottomMargin: 16
         text: adminVM.errorMessage
     }
 
-    // ---------------------------------------------------- Questions table
+    // ----------------------------------------------------------- Table
     Rectangle {
         id: table
         visible: page.hasAccess
         Layout.fillWidth: true
-        implicitHeight: tableColumn.implicitHeight
+        Layout.fillHeight: true
         radius: Theme.radiusLg
-        color: Theme.surfaceInput
+        color: Theme.surfaceCard
         border.width: 1
         border.color: Theme.borderGlass
+        clip: true
 
         ColumnLayout {
-            id: tableColumn
-            width: parent.width
+            anchors.fill: parent
             spacing: 0
 
-            // Loading
-            ColumnLayout {
-                visible: adminVM.loading
-                Layout.fillWidth: true
-                Layout.margins: 24
-                spacing: 20
-                Repeater {
-                    model: 3
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 24
-                        Skeleton { Layout.preferredWidth: 84; Layout.preferredHeight: 18; radius: 4 }
-                        Skeleton { Layout.preferredWidth: 56; Layout.preferredHeight: 14; radius: 4 }
-                        Skeleton { Layout.preferredWidth: 160; Layout.preferredHeight: 16; radius: 4 }
-                        Skeleton { Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 4 }
-                    }
-                }
-            }
-
-            // Empty
-            AppText {
-                visible: !adminVM.loading && adminVM.questionCount === 0
-                Layout.fillWidth: true
-                Layout.margins: 48
-                horizontalAlignment: Text.AlignHCenter
-                text: qsTr("No questions found for the selected filter.")
-                color: Theme.zinc400
-                wrapMode: Text.WordWrap
-            }
-
             // Column headers
-            Item {
-                visible: !adminVM.loading && adminVM.questionCount > 0
+            Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: 41
-
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: 1
-                    anchors.bottomMargin: 0
-                    clip: true
-                    Rectangle {
-                        width: parent.width
-                        height: parent.height + radius
-                        radius: Theme.radiusLg - 1
-                        color: Theme.alpha(Theme.zinc950, 0.6)
-                    }
-                }
+                implicitHeight: 42
+                color: Theme.alpha(Theme.zinc950, 0.6)
                 Row {
                     x: 24
                     height: parent.height
                     Repeater {
-                        model: [qsTr("Track"), qsTr("Level"), qsTr("Topic"), qsTr("Question Text"), qsTr("Status"), qsTr("Actions")]
+                        model: [qsTr("Track"), qsTr("Level"), qsTr("Topic"), qsTr("Question"), qsTr("Active"), ""]
                         AppText {
                             required property string modelData
                             required property int index
                             width: page.columnWidth(index, table.width)
                             height: parent.height
                             verticalAlignment: Text.AlignVCenter
-                            horizontalAlignment: index === 5 ? Text.AlignRight : Text.AlignLeft
                             text: modelData
                             color: Theme.zinc400
                             font.pixelSize: Typography.xs
@@ -275,15 +158,54 @@ PageScroll {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.borderGlass }
             }
 
-            // Rows (virtualised)
+            // Loading
+            ColumnLayout {
+                visible: adminVM.loading
+                Layout.fillWidth: true
+                Layout.margins: 24
+                spacing: 24
+                Repeater {
+                    model: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 24
+                        Skeleton { Layout.preferredWidth: 72; Layout.preferredHeight: 16; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 56; Layout.preferredHeight: 14; radius: 4 }
+                        Skeleton { Layout.preferredWidth: 160; Layout.preferredHeight: 14; radius: 4 }
+                        Skeleton { Layout.fillWidth: true; Layout.preferredHeight: 14; radius: 4 }
+                    }
+                }
+                Item { Layout.fillHeight: true }
+            }
+
+            // Empty
+            ColumnLayout {
+                visible: !adminVM.loading && adminVM.questionCount === 0
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 12
+                Item { Layout.fillHeight: true }
+                AppText {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: qsTr("No questions for this track yet")
+                    font.weight: Typography.semibold
+                }
+                TactileButton {
+                    Layout.alignment: Qt.AlignHCenter
+                    variant: "secondary"
+                    text: qsTr("Add the first one")
+                    iconLeft: "plus"
+                    onClicked: page.openAddDialog()
+                }
+                Item { Layout.fillHeight: true }
+            }
+
             ListView {
                 id: rows
                 visible: !adminVM.loading && adminVM.questionCount > 0
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(count, page.maxVisibleRows) * page.rowHeight
-                Layout.bottomMargin: 1
+                Layout.fillHeight: true
                 clip: true
-                interactive: count > page.maxVisibleRows
                 boundsBehavior: Flickable.StopAtBounds
                 model: adminVM.questions
                 ScrollBar.vertical: ThemedScrollBar {}
@@ -300,8 +222,7 @@ PageScroll {
 
                     width: rows.width
                     height: page.rowHeight
-                    color: rowHover.hovered ? Theme.alpha(Theme.zinc800, 0.4) : "transparent"
-                    Behavior on color { ColorAnimation { duration: Theme.durationFast } }
+                    color: rowHover.hovered ? Theme.alpha(Theme.zinc800, 0.35) : "transparent"
                     HoverHandler { id: rowHover }
 
                     Rectangle {
@@ -323,6 +244,7 @@ PageScroll {
                                 mono: true
                                 caps: true
                                 text: row.direction
+                                fontSize: Typography.tiny
                                 fontWeight: Typography.semibold
                             }
                         }
@@ -334,15 +256,12 @@ PageScroll {
                             color: Theme.zinc300
                             font.pixelSize: Typography.xs
                             font.capitalization: Font.Capitalize
-                            elide: Text.ElideRight
                         }
                         AppText {
                             width: page.columnWidth(2, table.width) - 16
                             height: parent.height
-                            rightPadding: 16
                             verticalAlignment: Text.AlignVCenter
                             text: row.topic
-                            color: Theme.textOnAccent
                             font.weight: Typography.medium
                             elide: Text.ElideRight
                         }
@@ -363,50 +282,41 @@ PageScroll {
                         Item {
                             width: page.columnWidth(4, table.width)
                             height: parent.height
-                            Row {
+                            ToggleSwitch {
                                 anchors.verticalCenter: parent.verticalCenter
-                                spacing: 8
-                                ToggleSwitch {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    checked: row.isActive
-                                    onToggled: adminVM.setQuestionActive(row.questionId, checked)
-                                }
-                                AppText {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: row.isActive ? qsTr("Active") : qsTr("Inactive")
-                                    color: row.isActive ? Theme.emerald400 : Theme.textMuted
-                                    font.pixelSize: Typography.xs
-                                }
+                                checked: row.isActive
+                                onToggled: adminVM.setQuestionActive(row.questionId, checked)
+                                ToolTip.visible: hovered
+                                ToolTip.delay: 600
+                                ToolTip.text: row.isActive ? qsTr("Used in interviews") : qsTr("Not used in interviews")
                             }
                         }
                         Item {
                             width: page.columnWidth(5, table.width)
                             height: parent.height
-
                             AbstractButton {
                                 id: removeButton
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                implicitWidth: 28
-                                implicitHeight: 28
+                                implicitWidth: 30
+                                implicitHeight: 30
                                 hoverEnabled: true
+                                opacity: rowHover.hovered || hovered ? 1 : 0.4
                                 onClicked: adminVM.deleteQuestion(row.questionId)
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                scale: down ? 0.94 : 1.0
                                 ToolTip.visible: hovered
-                                ToolTip.delay: 600
-                                ToolTip.text: qsTr("Delete")
-
+                                ToolTip.delay: 400
+                                ToolTip.text: qsTr("Delete question")
                                 background: Rectangle {
                                     radius: Theme.radiusSm
-                                    color: removeButton.hovered ? Theme.alpha(Theme.red500, 0.1) : "transparent"
+                                    color: removeButton.hovered ? Theme.alpha(Theme.red500, 0.12) : "transparent"
                                 }
                                 contentItem: Item {
                                     Icon {
                                         anchors.centerIn: parent
                                         name: "trash-2"
                                         size: 16
-                                        color: removeButton.hovered ? Theme.red400 : Theme.textMuted
+                                        color: removeButton.hovered ? Theme.red400 : Theme.zinc400
                                     }
                                 }
                             }
@@ -416,48 +326,44 @@ PageScroll {
             }
 
             // Pagination
-            RowLayout {
+            Rectangle {
                 visible: !adminVM.loading && adminVM.totalPages > 1
                 Layout.fillWidth: true
-                Layout.leftMargin: 24
-                Layout.rightMargin: 16
-                Layout.preferredHeight: 52
-                spacing: 8
+                implicitHeight: 52
+                color: "transparent"
+                Rectangle { width: parent.width; height: 1; color: Theme.borderGlass }
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignTop
-                    Layout.leftMargin: -24
-                    Layout.rightMargin: -16
-                    implicitHeight: 1
-                    color: Theme.borderGlass
-                    visible: false
-                }
-                MonoText {
-                    Layout.fillWidth: true
-                    text: qsTr("Page %1 of %2").arg(adminVM.page).arg(adminVM.totalPages)
-                }
-                TactileButton {
-                    variant: "secondary"
-                    text: qsTr("Previous")
-                    fontSize: Typography.xs
-                    implicitHeight: 30
-                    leftPadding: 12
-                    rightPadding: 12
-                    buttonRadius: Theme.radiusSm
-                    enabled: adminVM.page > 1
-                    onClicked: adminVM.previousPage()
-                }
-                TactileButton {
-                    variant: "secondary"
-                    text: qsTr("Next")
-                    fontSize: Typography.xs
-                    implicitHeight: 30
-                    leftPadding: 12
-                    rightPadding: 12
-                    buttonRadius: Theme.radiusSm
-                    enabled: adminVM.page < adminVM.totalPages
-                    onClicked: adminVM.nextPage()
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 24
+                    anchors.rightMargin: 16
+                    spacing: 8
+                    MonoText {
+                        Layout.fillWidth: true
+                        text: qsTr("Page %1 of %2").arg(adminVM.page).arg(adminVM.totalPages)
+                    }
+                    TactileButton {
+                        variant: "secondary"
+                        text: qsTr("Previous")
+                        fontSize: Typography.xs
+                        implicitHeight: 30
+                        leftPadding: 12
+                        rightPadding: 12
+                        buttonRadius: Theme.radiusSm
+                        enabled: adminVM.page > 1
+                        onClicked: adminVM.previousPage()
+                    }
+                    TactileButton {
+                        variant: "secondary"
+                        text: qsTr("Next")
+                        fontSize: Typography.xs
+                        implicitHeight: 30
+                        leftPadding: 12
+                        rightPadding: 12
+                        buttonRadius: Theme.radiusSm
+                        enabled: adminVM.page < adminVM.totalPages
+                        onClicked: adminVM.nextPage()
+                    }
                 }
             }
         }
@@ -519,7 +425,7 @@ PageScroll {
         AppText {
             Layout.fillWidth: true
             Layout.bottomMargin: 16
-            text: qsTr("Add New Question to Bank")
+            text: qsTr("New question")
             color: Theme.textOnAccent
             font.pixelSize: Typography.lg
             font.weight: Typography.bold
@@ -582,7 +488,7 @@ PageScroll {
 
         FieldLabel {
             Layout.topMargin: 16
-            text: qsTr("Question Text")
+            text: qsTr("Question")
         }
         DarkTextArea {
             id: questionField
