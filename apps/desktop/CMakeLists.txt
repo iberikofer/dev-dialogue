@@ -44,6 +44,38 @@ else()
     endif()
 endif()
 
+# Screen view models and list models of the UI layer. Shared by the app and
+# the test target.
+set(DESKTOP_UI_VIEWMODEL_SOURCES
+    src/viewmodels/AdminViewModel.cpp
+    src/viewmodels/BackendStatusViewModel.cpp
+    src/viewmodels/ChatViewModel.cpp
+    src/viewmodels/DashboardViewModel.cpp
+    src/viewmodels/DemoData.cpp
+    src/viewmodels/FormValidator.cpp
+    src/viewmodels/InterviewListModel.cpp
+    src/viewmodels/MessageListModel.cpp
+    src/viewmodels/QuestionListModel.cpp
+    src/viewmodels/ReportViewModel.cpp
+    src/viewmodels/SettingsViewModel.cpp
+    src/viewmodels/SetupViewModel.cpp
+)
+set(DESKTOP_UI_VIEWMODEL_HEADERS
+    include/viewmodels/AdminViewModel.hpp
+    include/viewmodels/BackendStatusViewModel.hpp
+    include/viewmodels/ChatViewModel.hpp
+    include/viewmodels/DashboardViewModel.hpp
+    include/viewmodels/DemoData.hpp
+    include/viewmodels/FormValidator.hpp
+    include/viewmodels/InterviewListModel.hpp
+    include/viewmodels/MessageListModel.hpp
+    include/viewmodels/QuestionListModel.hpp
+    include/viewmodels/ReportViewModel.hpp
+    include/viewmodels/SettingsViewModel.hpp
+    include/viewmodels/SetupViewModel.hpp
+    include/viewmodels/ViewModelSupport.hpp
+)
+
 add_executable(DevDialogue
     src/main.cpp
     
@@ -78,6 +110,8 @@ add_executable(DevDialogue
     include/viewmodels/AuthViewModel.hpp
     src/viewmodels/NavigationViewModel.cpp
     include/viewmodels/NavigationViewModel.hpp
+    ${DESKTOP_UI_VIEWMODEL_SOURCES}
+    ${DESKTOP_UI_VIEWMODEL_HEADERS}
 )
 
 target_include_directories(DevDialogue PRIVATE
@@ -108,14 +142,85 @@ if(WIN32)
     target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32)
 endif()
 
+# Application icon shown by Explorer and the taskbar (resources/app).
+if(WIN32)
+    target_sources(DevDialogue PRIVATE resources/app/app-icon.rc)
+endif()
+
+# Design-token singletons (each file also declares `pragma Singleton`).
+set_source_files_properties(
+    qml/styles/Theme.qml
+    qml/styles/Typography.qml
+    qml/styles/Icons.qml
+    qml/styles/I18n.qml
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE
+)
+
+# Bundled icon set (see resources/NOTICE.md).
+file(GLOB DESKTOP_ICON_FILES
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS
+    resources/icons/*.svg
+)
+
 qt_add_qml_module(DevDialogue
     URI "DevDialogue.App"
     VERSION 1.0
     QML_FILES
         qml/Main.qml
+
+        # Design tokens
         qml/styles/Theme.qml
-        qml/components/Navbar.qml
-        qml/views/LandingView.qml
+        qml/styles/Typography.qml
+        qml/styles/Icons.qml
+        qml/styles/I18n.qml
+
+        # Reusable components
+        qml/components/AlertBox.qml
+        qml/components/AppPage.qml
+        qml/components/AppText.qml
+        qml/components/Badge.qml
+        qml/components/DarkCard.qml
+        qml/components/DarkTextArea.qml
+        qml/components/DarkTextField.qml
+        qml/components/GlowBlob.qml
+        qml/components/Icon.qml
+        qml/components/KpiTile.qml
+        qml/components/MessageBubble.qml
+        qml/components/ModalOverlay.qml
+        qml/components/MonoText.qml
+        qml/components/ProgressRing.qml
+        qml/components/PulseDot.qml
+        qml/components/ScoreGauge.qml
+        qml/components/SegmentedControl.qml
+        qml/components/SelectBox.qml
+        qml/components/SelectCard.qml
+        qml/components/Sidebar.qml
+        qml/components/SidebarItem.qml
+        qml/components/Skeleton.qml
+        qml/components/SoftGlow.qml
+        qml/components/Spinner.qml
+        qml/components/SplashOverlay.qml
+        qml/components/TactileButton.qml
+        qml/components/ThemedScrollBar.qml
+        qml/components/Toast.qml
+        qml/components/ToggleSwitch.qml
+        qml/components/UserAvatar.qml
+
+        # Screens
+        qml/views/LoginView.qml
+        qml/views/DashboardView.qml
+        qml/views/SetupView.qml
+        qml/views/ChatRoomView.qml
+        qml/views/ReportView.qml
+        qml/views/AdminView.qml
+        qml/views/AccountView.qml
+    RESOURCES
+        resources/fonts/Geist-Variable.ttf
+        resources/fonts/GeistMono-Variable.ttf
+        resources/app/app-icon.svg
+        resources/app/app-icon.png
+        ${DESKTOP_ICON_FILES}
 )
 
 # ==========================================
@@ -132,6 +237,9 @@ if(GTest_FOUND)
         tests/unit/TestSecureStorage.cpp
         tests/unit/TestApiClient.cpp
         tests/unit/TestAuthService.cpp
+        tests/unit/TestFormValidator.cpp
+        tests/unit/TestListModels.cpp
+        tests/unit/TestViewModels.cpp
 
         # Headers for AUTOMOC
         include/core/AppConfig.hpp
@@ -145,6 +253,8 @@ if(GTest_FOUND)
         include/services/AuthService.hpp
         include/services/InterviewService.hpp
         include/services/AdminService.hpp
+        include/viewmodels/NavigationViewModel.hpp
+        ${DESKTOP_UI_VIEWMODEL_HEADERS}
 
         # Sources required for tests
         src/core/AppConfig.cpp
@@ -154,6 +264,8 @@ if(GTest_FOUND)
         src/services/AuthService.cpp
         src/services/InterviewService.cpp
         src/services/AdminService.cpp
+        src/viewmodels/NavigationViewModel.cpp
+        ${DESKTOP_UI_VIEWMODEL_SOURCES}
     )
 
     target_include_directories(DevDialogueTests PRIVATE
