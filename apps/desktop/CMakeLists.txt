@@ -237,6 +237,9 @@ if(GTest_FOUND)
         tests/unit/TestSecureStorage.cpp
         tests/unit/TestApiClient.cpp
         tests/unit/TestAuthService.cpp
+        tests/unit/TestFormValidator.cpp
+        tests/unit/TestListModels.cpp
+        tests/unit/TestViewModels.cpp
 
         # Headers for AUTOMOC
         include/core/AppConfig.hpp
@@ -250,6 +253,8 @@ if(GTest_FOUND)
         include/services/AuthService.hpp
         include/services/InterviewService.hpp
         include/services/AdminService.hpp
+        include/viewmodels/NavigationViewModel.hpp
+        ${DESKTOP_UI_VIEWMODEL_HEADERS}
 
         # Sources required for tests
         src/core/AppConfig.cpp
@@ -259,6 +264,8 @@ if(GTest_FOUND)
         src/services/AuthService.cpp
         src/services/InterviewService.cpp
         src/services/AdminService.cpp
+        src/viewmodels/NavigationViewModel.cpp
+        ${DESKTOP_UI_VIEWMODEL_SOURCES}
     )
 
     target_include_directories(DevDialogueTests PRIVATE
