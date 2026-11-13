@@ -223,9 +223,9 @@ void AdminViewModel::applyDemoQuestions() {
     setLoading(false);
 }
 
-void AdminViewModel::setLoading(bool loading) {
-    if (m_loading != loading) {
-        m_loading = loading;
+void AdminViewModel::setLoading(bool value) {
+    if (m_loading != value) {
+        m_loading = value;
         emit loadingChanged();
     }
 }

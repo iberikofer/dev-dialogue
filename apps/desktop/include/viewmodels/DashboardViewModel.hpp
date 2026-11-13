@@ -53,9 +53,9 @@ signals:
     void interviewsChanged();
 
 private:
-    void setLoading(bool loading);
+    void setLoading(bool value);
     void apply(const models::UserDashboardStats& stats, std::vector<models::InterviewSummary> interviews,
-               bool demo);
+               bool isDemo);
 
     std::shared_ptr<services::InterviewService> m_interviewService;
     InterviewListModel m_interviews;

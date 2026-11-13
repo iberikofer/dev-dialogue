@@ -111,9 +111,9 @@ QString SettingsViewModel::theme() const {
     return m_settings.value(KeyTheme, QStringLiteral("oled")).toString();
 }
 
-void SettingsViewModel::setTheme(const QString& theme) {
-    if (theme != this->theme()) {
-        m_settings.setValue(KeyTheme, theme);
+void SettingsViewModel::setTheme(const QString& value) {
+    if (value != theme()) {
+        m_settings.setValue(KeyTheme, value);
         emit themeChanged();
     }
 }
@@ -140,13 +140,14 @@ void SettingsViewModel::setAiPersona(const QString& persona) {
     }
 }
 
-void SettingsViewModel::saveProfile(const QString& nickname, const QString& email, const QString& avatarUrl) {
+void SettingsViewModel::saveProfile(const QString& nickname, const QString& emailAddress,
+                                    const QString& avatarLink) {
     if (profileKey(FieldNickname).isEmpty()) {
         return;
     }
     m_settings.setValue(profileKey(FieldNickname), nickname.trimmed());
-    m_settings.setValue(profileKey(FieldEmail), email.trimmed());
-    m_settings.setValue(profileKey(FieldAvatar), avatarUrl.trimmed());
+    m_settings.setValue(profileKey(FieldEmail), emailAddress.trimmed());
+    m_settings.setValue(profileKey(FieldAvatar), avatarLink.trimmed());
     emit profileChanged();
 }
 

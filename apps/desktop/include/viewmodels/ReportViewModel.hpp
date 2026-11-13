@@ -55,8 +55,8 @@ signals:
     void uiLanguageChanged();
 
 private:
-    void setLoading(bool loading);
-    void apply(const models::InterviewFeedbackReport& report, bool demo);
+    void setLoading(bool value);
+    void apply(const models::InterviewFeedbackReport& report, bool isDemo);
 
     std::shared_ptr<services::InterviewService> m_interviewService;
     models::InterviewFeedbackReport m_report;

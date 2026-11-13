@@ -72,7 +72,7 @@ signals:
 
 private:
     void applyDemoQuestions();
-    void setLoading(bool loading);
+    void setLoading(bool value);
     void setSubmitting(bool submitting);
     void setErrorMessage(const QString& message);
     void setPaging(int page, int totalPages, int totalCount);

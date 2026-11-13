@@ -37,7 +37,7 @@ public:
     QStringList linkedProviders() const;
 
     QString theme() const;
-    void setTheme(const QString& theme);
+    void setTheme(const QString& value);
     bool soundEnabled() const;
     void setSoundEnabled(bool enabled);
     QString aiPersona() const;
@@ -45,7 +45,7 @@ public:
 
     // Stores the edited profile fields for the current user. Empty values
     // clear the override and fall back to the signed-in profile.
-    Q_INVOKABLE void saveProfile(const QString& nickname, const QString& email, const QString& avatarUrl);
+    Q_INVOKABLE void saveProfile(const QString& nickname, const QString& emailAddress, const QString& avatarLink);
 
     // Links or unlinks a sign-in service; returns true when it is now linked.
     Q_INVOKABLE bool toggleProvider(const QString& provider);

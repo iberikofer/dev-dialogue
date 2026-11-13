@@ -81,17 +81,17 @@ void DashboardViewModel::refresh() {
         });
 }
 
-void DashboardViewModel::setLoading(bool loading) {
-    if (m_loading != loading) {
-        m_loading = loading;
+void DashboardViewModel::setLoading(bool value) {
+    if (m_loading != value) {
+        m_loading = value;
         emit loadingChanged();
     }
 }
 
 void DashboardViewModel::apply(const models::UserDashboardStats& stats,
-                               std::vector<models::InterviewSummary> interviews, bool demo) {
+                               std::vector<models::InterviewSummary> interviews, bool isDemo) {
     m_stats = stats;
-    m_isDemoData = demo;
+    m_isDemoData = isDemo;
     m_interviews.setInterviews(std::move(interviews));
     emit statsChanged();
     emit interviewsChanged();

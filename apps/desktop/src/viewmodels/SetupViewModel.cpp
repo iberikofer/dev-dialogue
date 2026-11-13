@@ -34,23 +34,23 @@ SetupViewModel::SetupViewModel(std::shared_ptr<services::InterviewService> inter
                                NavigationViewModel* navigation, QObject* parent)
     : QObject(parent), m_interviewService(std::move(interviewService)), m_navigation(navigation) {}
 
-void SetupViewModel::setDirection(const QString& direction) {
-    if (m_direction != direction) {
-        m_direction = direction;
+void SetupViewModel::setDirection(const QString& value) {
+    if (m_direction != value) {
+        m_direction = value;
         emit directionChanged();
     }
 }
 
-void SetupViewModel::setLevel(const QString& level) {
-    if (m_level != level) {
-        m_level = level;
+void SetupViewModel::setLevel(const QString& value) {
+    if (m_level != value) {
+        m_level = value;
         emit levelChanged();
     }
 }
 
-void SetupViewModel::setLanguage(const QString& language) {
-    if (m_language != language) {
-        m_language = language;
+void SetupViewModel::setLanguage(const QString& value) {
+    if (m_language != value) {
+        m_language = value;
         emit languageChanged();
     }
 }

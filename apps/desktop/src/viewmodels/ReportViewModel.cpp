@@ -96,16 +96,16 @@ void ReportViewModel::load(const QString& interviewId) {
         });
 }
 
-void ReportViewModel::setLoading(bool loading) {
-    if (m_loading != loading) {
-        m_loading = loading;
+void ReportViewModel::setLoading(bool value) {
+    if (m_loading != value) {
+        m_loading = value;
         emit loadingChanged();
     }
 }
 
-void ReportViewModel::apply(const models::InterviewFeedbackReport& report, bool demo) {
+void ReportViewModel::apply(const models::InterviewFeedbackReport& report, bool isDemo) {
     m_report = report;
-    m_isDemoData = demo;
+    m_isDemoData = isDemo;
     m_hasReport = true;
     emit reportChanged();
     setLoading(false);

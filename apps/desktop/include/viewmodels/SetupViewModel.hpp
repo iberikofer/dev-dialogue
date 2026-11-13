@@ -24,11 +24,11 @@ public:
                             NavigationViewModel* navigation, QObject* parent = nullptr);
 
     QString direction() const { return m_direction; }
-    void setDirection(const QString& direction);
+    void setDirection(const QString& value);
     QString level() const { return m_level; }
-    void setLevel(const QString& level);
+    void setLevel(const QString& value);
     QString language() const { return m_language; }
-    void setLanguage(const QString& language);
+    void setLanguage(const QString& value);
     bool isBusy() const { return m_isBusy; }
     QString errorMessage() const { return m_errorMessage; }
 
