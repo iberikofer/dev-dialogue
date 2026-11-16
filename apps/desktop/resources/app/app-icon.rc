@@ -1,1 +1,31 @@
+// Explorer / taskbar icon.
 IDI_ICON1 ICON "app-icon.ico"
+
+// File properties (Details tab) shown by Windows and by the installer.
+VS_VERSION_INFO VERSIONINFO
+  FILEVERSION    1,0,0,0
+  PRODUCTVERSION 1,0,0,0
+  FILEFLAGSMASK  0x3fL
+  FILEFLAGS      0x0L
+  FILEOS         0x40004L
+  FILETYPE       0x1L
+  FILESUBTYPE    0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName",      "VNTU"
+      VALUE "FileDescription",  "Dev Dialogue - Technical Interview Simulator"
+      VALUE "FileVersion",      "1.0.0"
+      VALUE "InternalName",     "DevDialogue"
+      VALUE "OriginalFilename", "DevDialogue.exe"
+      VALUE "ProductName",      "Dev Dialogue"
+      VALUE "ProductVersion",   "1.0.0"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

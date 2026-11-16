@@ -114,6 +114,11 @@ add_executable(DevDialogue
     ${DESKTOP_UI_VIEWMODEL_HEADERS}
 )
 
+# GUI subsystem: no console window behind the app window.
+if(WIN32)
+    set_target_properties(DevDialogue PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
 target_include_directories(DevDialogue PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -305,9 +310,17 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt
 )
 
 if(WIN32 AND WINDEPLOYQT_EXECUTABLE AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    # The MSYS2 Qt build keeps qmlimportscanner in share/qt6/bin, and
+    # windeployqt aborts (exit 1) when it cannot start it - which fails the
+    # build right after linking. Put the Qt bin and tools dirs on PATH.
+    get_filename_component(QT_BIN_DIR "${Qt6_DIR}/../../../bin" ABSOLUTE)
+    get_filename_component(QT_TOOLS_DIR "${Qt6_DIR}/../../../share/qt6/bin" ABSOLUTE)
     add_custom_command(TARGET DevDialogue POST_BUILD
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PATH=${QT_BIN_DIR};${QT_TOOLS_DIR};$ENV{PATH}"
+            "${WINDEPLOYQT_EXECUTABLE}"
             --qmldir ${CMAKE_CURRENT_SOURCE_DIR}/qml
+            --no-translations
             $<TARGET_FILE:DevDialogue>
         COMMENT "Deploying Qt runtime libraries with windeployqt..."
     )
