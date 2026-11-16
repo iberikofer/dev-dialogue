@@ -164,7 +164,8 @@ AppPage {
                 Layout.fillHeight: true
                 spacing: 14
 
-                Item { Layout.fillHeight: true }
+                // fillWidth lets the column span the table so its content centres.
+                Item { Layout.fillWidth: true; Layout.fillHeight: true }
                 Icon {
                     Layout.alignment: Qt.AlignHCenter
                     name: "history"

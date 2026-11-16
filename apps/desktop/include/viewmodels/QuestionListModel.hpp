@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QString>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include "models/ApiContracts.hpp"
@@ -32,6 +33,11 @@ public:
     void setQuestions(std::vector<models::QuestionBankItem> questions);
     void prepend(models::QuestionBankItem question);
     bool removeById(const QString& id);
+    // Removes the question and hands it back with the row it was in.
+    std::optional<std::pair<int, models::QuestionBankItem>> takeById(const QString& id);
+    // Puts a question back at the row (clamped to the list).
+    void insertAt(int row, models::QuestionBankItem question);
+    bool contains(const QString& id) const { return indexOfId(id) >= 0; }
     // Returns the previous state, or nothing if the question is not in the list.
     std::optional<bool> setActive(const QString& id, bool active);
     // Replaces the row with the same id (after the server confirmed an edit).

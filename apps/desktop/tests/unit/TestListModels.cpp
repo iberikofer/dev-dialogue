@@ -159,6 +159,26 @@ TEST(QuestionListModelTest, RemoveByIdDeletesOnlyThatRow) {
     EXPECT_EQ(text(model, 1, QuestionListModel::QuestionIdRole).toStdString(), "q-3");
 }
 
+TEST(QuestionListModelTest, ATakenQuestionGoesBackIntoItsRow) {
+    QuestionListModel model;
+    model.setQuestions({makeQuestion("q-1"), makeQuestion("q-2"), makeQuestion("q-3")});
+
+    auto taken = model.takeById("q-2");
+    ASSERT_TRUE(taken.has_value());
+    EXPECT_EQ(taken->first, 1);
+    EXPECT_EQ(taken->second.id, "q-2");
+    EXPECT_FALSE(model.contains("q-2"));
+    EXPECT_FALSE(model.takeById("q-missing").has_value());
+
+    model.insertAt(taken->first, taken->second);
+    ASSERT_EQ(model.rowCount(), 3);
+    EXPECT_EQ(text(model, 1, QuestionListModel::QuestionIdRole).toStdString(), "q-2");
+
+    // A row past the end lands at the end.
+    model.insertAt(99, makeQuestion("q-4"));
+    EXPECT_EQ(text(model, 3, QuestionListModel::QuestionIdRole).toStdString(), "q-4");
+}
+
 TEST(QuestionListModelTest, SetActiveReportsThePreviousStateAndNotifiesTheView) {
     QuestionListModel model;
     model.setQuestions({makeQuestion("q-1", true)});

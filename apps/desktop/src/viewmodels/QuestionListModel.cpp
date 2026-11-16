@@ -1,5 +1,7 @@
 #include "viewmodels/QuestionListModel.hpp"
 
+#include <algorithm>
+
 #include "viewmodels/ViewModelSupport.hpp"
 
 namespace devdialogue::viewmodels {
@@ -58,14 +60,26 @@ void QuestionListModel::prepend(models::QuestionBankItem question) {
 }
 
 bool QuestionListModel::removeById(const QString& id) {
+    return takeById(id).has_value();
+}
+
+std::optional<std::pair<int, models::QuestionBankItem>> QuestionListModel::takeById(const QString& id) {
     const int row = indexOfId(id);
     if (row < 0) {
-        return false;
+        return std::nullopt;
     }
     beginRemoveRows(QModelIndex(), row, row);
+    models::QuestionBankItem item = std::move(m_questions[static_cast<std::size_t>(row)]);
     m_questions.erase(m_questions.begin() + row);
     endRemoveRows();
-    return true;
+    return std::make_pair(row, std::move(item));
+}
+
+void QuestionListModel::insertAt(int row, models::QuestionBankItem question) {
+    row = std::clamp(row, 0, count());
+    beginInsertRows(QModelIndex(), row, row);
+    m_questions.insert(m_questions.begin() + row, std::move(question));
+    endInsertRows();
 }
 
 std::optional<bool> QuestionListModel::setActive(const QString& id, bool active) {

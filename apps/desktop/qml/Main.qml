@@ -193,6 +193,19 @@ ApplicationWindow {
         id: toast
         z: 2000
     }
+    Connections {
+        target: adminVM
+        function onQuestionDeleted(topic) {
+            toast.show(qsTr("Question \u201c%1\u201d deleted").arg(topic), "info", qsTr("Undo"),
+                       () => adminVM.undoDelete())
+        }
+        function onQuestionDeleteFailed(topic, reason) {
+            toast.show(reason !== ""
+                       ? qsTr("\u201c%1\u201d was not deleted: %2").arg(topic).arg(reason)
+                       : qsTr("\u201c%1\u201d was not deleted: the server could not be reached.").arg(topic),
+                       "error")
+        }
+    }
 
     SplashOverlay {
         anchors.fill: parent

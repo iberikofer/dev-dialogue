@@ -13,6 +13,7 @@ namespace devdialogue::viewmodels {
 namespace {
 
 constexpr int PageSize = 20;
+constexpr int UndoWindowMs = 5000;
 
 // Ids of questions that only exist locally, e.g. "q-7fk2a" (same shape as the web).
 QString makeLocalQuestionId() {
@@ -28,7 +29,16 @@ QString makeLocalQuestionId() {
 
 AdminViewModel::AdminViewModel(std::shared_ptr<services::AdminService> adminService,
                                std::shared_ptr<services::AuthService> authService, QObject* parent)
-    : QObject(parent), m_adminService(std::move(adminService)), m_authService(std::move(authService)) {}
+    : QObject(parent), m_adminService(std::move(adminService)), m_authService(std::move(authService)) {
+    m_undoTimer.setSingleShot(true);
+    m_undoTimer.setInterval(UndoWindowMs);
+    connect(&m_undoTimer, &QTimer::timeout, this, &AdminViewModel::commitPendingDelete);
+}
+
+AdminViewModel::~AdminViewModel() {
+    // Closing the app inside the undo window still deletes the question.
+    commitPendingDelete();
+}
 
 void AdminViewModel::setDirectionFilter(const QString& direction) {
     if (m_directionFilter == direction) {
@@ -53,6 +63,8 @@ void AdminViewModel::setUiLanguage(const QString& language) {
 }
 
 void AdminViewModel::refresh() {
+    // A new list has no place to put an undone question back.
+    commitPendingDelete();
     const int generation = ++m_generation;
     setErrorMessage(QString());
     setLoading(true);
@@ -81,8 +93,14 @@ void AdminViewModel::refresh() {
             }
             const int pageSize = std::max(1, page->pageSize);
             const int pages = page->totalPages.value_or((page->totalCount + pageSize - 1) / pageSize);
+            std::vector<models::QuestionBankItem> items = page->items;
+            items.erase(std::remove_if(items.begin(), items.end(),
+                                       [&self](const models::QuestionBankItem& item) {
+                                           return self->m_deletingIds.contains(QString::fromStdString(item.id));
+                                       }),
+                        items.end());
             self->m_isDemoData = false;
-            self->m_questions.setQuestions(page->items);
+            self->m_questions.setQuestions(std::move(items));
             self->setPaging(page->page, std::max(1, pages), page->totalCount);
             emit self->questionsChanged();
             self->setLoading(false);
@@ -139,6 +157,7 @@ void AdminViewModel::createQuestion(const QString& direction, const QString& lev
             }
         }
         m_questions.prepend(std::move(item));
+        adjustTotalCount(1);
         emit questionsChanged();
         emit questionCreated();
     };
@@ -158,6 +177,7 @@ void AdminViewModel::createQuestion(const QString& direction, const QString& lev
             self->setSubmitting(false);
             if (const auto* created = std::get_if<models::QuestionBankItem>(&result)) {
                 self->m_questions.prepend(*created);
+                self->adjustTotalCount(1);
                 emit self->questionsChanged();
                 emit self->questionCreated();
                 return;
@@ -167,14 +187,65 @@ void AdminViewModel::createQuestion(const QString& direction, const QString& lev
 }
 
 void AdminViewModel::deleteQuestion(const QString& id) {
-    // Removed from the list right away, as on the web; the server call is
-    // best-effort.
-    if (m_questions.removeById(id)) {
-        emit questionsChanged();
+    // Only one delete waits at a time: the previous one goes through now.
+    commitPendingDelete();
+    auto taken = m_questions.takeById(id);
+    if (!taken.has_value()) {
+        return;
     }
-    if (m_adminService && !m_isDemoData) {
-        m_adminService->deleteQuestion(id, [](bool, const models::ApiError&) {});
+    const QString topic = QString::fromStdString(taken->second.topic);
+    m_pendingDelete = PendingDelete{taken->first, std::move(taken->second)};
+    adjustTotalCount(-1);
+    emit questionsChanged();
+    emit questionDeleted(topic);
+    m_undoTimer.start();
+}
+
+void AdminViewModel::undoDelete() {
+    if (!m_pendingDelete.has_value()) {
+        return;
     }
+    m_undoTimer.stop();
+    PendingDelete pending = std::move(*m_pendingDelete);
+    m_pendingDelete.reset();
+    m_questions.insertAt(pending.row, std::move(pending.item));
+    adjustTotalCount(1);
+    emit questionsChanged();
+}
+
+void AdminViewModel::commitPendingDelete() {
+    m_undoTimer.stop();
+    if (!m_pendingDelete.has_value()) {
+        return;
+    }
+    PendingDelete pending = std::move(*m_pendingDelete);
+    m_pendingDelete.reset();
+    // Sample questions only live in this window.
+    if (!m_adminService || m_isDemoData) {
+        return;
+    }
+
+    const QString id = QString::fromStdString(pending.item.id);
+    m_deletingIds.insert(id);
+    QPointer<AdminViewModel> self(this);
+    m_adminService->deleteQuestion(id, [self, id, pending](bool success, const models::ApiError& error) {
+        if (!self) {
+            return;
+        }
+        self->m_deletingIds.remove(id);
+        if (success) {
+            return;
+        }
+        // The question is still on the server: show it again, unless a page
+        // loaded since already has it.
+        if (!self->m_questions.contains(id)) {
+            self->m_questions.insertAt(pending.row, pending.item);
+            self->adjustTotalCount(1);
+            emit self->questionsChanged();
+        }
+        emit self->questionDeleteFailed(QString::fromStdString(pending.item.topic),
+                                        error.isNetworkDown ? QString() : QString::fromStdString(error.message));
+    });
 }
 
 void AdminViewModel::setQuestionActive(const QString& id, bool active) {
@@ -208,6 +279,7 @@ void AdminViewModel::setQuestionActive(const QString& id, bool active) {
 }
 
 void AdminViewModel::applyDemoQuestions() {
+    commitPendingDelete();
     std::vector<models::QuestionBankItem> items = demo::questions(m_uiLanguage);
     if (!m_directionFilter.isEmpty()) {
         const auto wanted = support::enumFromString<models::InterviewDirection>(m_directionFilter);
@@ -251,6 +323,10 @@ void AdminViewModel::setPaging(int page, int totalPages, int totalCount) {
         m_totalCount = totalCount;
         emit pageChanged();
     }
+}
+
+void AdminViewModel::adjustTotalCount(int delta) {
+    setPaging(m_page, m_totalPages, std::max(0, m_totalCount + delta));
 }
 
 } // namespace devdialogue::viewmodels

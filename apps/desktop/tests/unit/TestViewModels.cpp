@@ -824,7 +824,7 @@ TEST_F(ViewModelTest, AdminRejectsQuestionsWithoutTopicOrText) {
     EXPECT_FALSE(admin.isSubmitting());
 }
 
-TEST_F(ViewModelTest, AdminDeleteRemovesTheRowAndTellsTheServer) {
+TEST_F(ViewModelTest, AdminDeleteRemovesTheRowAndTellsTheServerAfterTheUndoWindow) {
     serve([](const Request& request) {
         if (request.method == "DELETE") {
             return jsonResponse(200, nlohmann::json::object());
@@ -837,13 +837,111 @@ TEST_F(ViewModelTest, AdminDeleteRemovesTheRowAndTellsTheServer) {
     });
 
     AdminViewModel admin(adminService, authService);
+    admin.setUndoWindow(150);
+    admin.refresh();
+    ASSERT_TRUE(waitUntil([&]() { return !admin.loading(); }));
+
+    QString deletedTopic;
+    QObject::connect(&admin, &AdminViewModel::questionDeleted, &admin,
+                     [&](const QString& topic) { deletedTopic = topic; });
+    admin.deleteQuestion("q-1");
+    ASSERT_EQ(admin.questionCount(), 1);
+    EXPECT_EQ(cell(admin.questions(), 0, QuestionListModel::QuestionIdRole).toStdString(), "q-2");
+    EXPECT_EQ(deletedTopic.toStdString(), "Topic q-1");
+    EXPECT_FALSE(requests.contains("DELETE /api/admin/questions/q-1"));
+    ASSERT_TRUE(waitUntil([&]() { return requests.contains("DELETE /api/admin/questions/q-1"); }));
+    EXPECT_EQ(admin.questionCount(), 1);
+}
+
+TEST_F(ViewModelTest, AdminUndoPutsTheQuestionBackWithoutTellingTheServer) {
+    serve([](const Request& request) {
+        if (request.method == "DELETE") {
+            return jsonResponse(200, nlohmann::json::object());
+        }
+        models::PagedResult<models::QuestionBankItem> page;
+        page.items = {bankQuestion("q-1", models::InterviewDirection::Frontend),
+                      bankQuestion("q-2", models::InterviewDirection::Backend)};
+        page.totalCount = 2;
+        return jsonResponse(200, page);
+    });
+
+    AdminViewModel admin(adminService, authService);
+    admin.setUndoWindow(100);
     admin.refresh();
     ASSERT_TRUE(waitUntil([&]() { return !admin.loading(); }));
 
     admin.deleteQuestion("q-1");
+    EXPECT_EQ(admin.totalCount(), 1);
+    admin.undoDelete();
+
+    ASSERT_EQ(admin.questionCount(), 2);
+    EXPECT_EQ(admin.totalCount(), 2);
+    EXPECT_EQ(cell(admin.questions(), 0, QuestionListModel::QuestionIdRole).toStdString(), "q-1");
+    // Well past the undo window, nothing was sent.
+    EXPECT_FALSE(waitUntil([&]() { return requests.contains("DELETE /api/admin/questions/q-1"); }, 400));
+}
+
+TEST_F(ViewModelTest, AdminDeleteRefusedByTheServerBringsTheRowBack) {
+    serve([](const Request& request) {
+        if (request.method == "DELETE") {
+            return jsonResponse(409, {{"message", "Question is used by an active interview"}});
+        }
+        models::PagedResult<models::QuestionBankItem> page;
+        page.items = {bankQuestion("q-1", models::InterviewDirection::Frontend),
+                      bankQuestion("q-2", models::InterviewDirection::Backend)};
+        page.totalCount = 2;
+        return jsonResponse(200, page);
+    });
+
+    AdminViewModel admin(adminService, authService);
+    admin.setUndoWindow(10);
+    admin.refresh();
+    ASSERT_TRUE(waitUntil([&]() { return !admin.loading(); }));
+
+    QString failedTopic;
+    QString failedReason;
+    QObject::connect(&admin, &AdminViewModel::questionDeleteFailed, &admin,
+                     [&](const QString& topic, const QString& reason) {
+                         failedTopic = topic;
+                         failedReason = reason;
+                     });
+    admin.deleteQuestion("q-1");
+    ASSERT_EQ(admin.questionCount(), 1);
+    ASSERT_TRUE(waitUntil([&]() { return !failedTopic.isEmpty(); }));
+
+    EXPECT_EQ(failedTopic.toStdString(), "Topic q-1");
+    EXPECT_EQ(failedReason.toStdString(), "Question is used by an active interview");
+    ASSERT_EQ(admin.questionCount(), 2);
+    EXPECT_EQ(cell(admin.questions(), 0, QuestionListModel::QuestionIdRole).toStdString(), "q-1");
+}
+
+TEST_F(ViewModelTest, AdminSecondDeleteSendsTheFirstOneAtOnce) {
+    serve([](const Request& request) {
+        if (request.method == "DELETE") {
+            return jsonResponse(200, nlohmann::json::object());
+        }
+        models::PagedResult<models::QuestionBankItem> page;
+        page.items = {bankQuestion("q-1", models::InterviewDirection::Frontend),
+                      bankQuestion("q-2", models::InterviewDirection::Backend)};
+        page.totalCount = 2;
+        return jsonResponse(200, page);
+    });
+
+    AdminViewModel admin(adminService, authService);
+    admin.setUndoWindow(60000);
+    admin.refresh();
+    ASSERT_TRUE(waitUntil([&]() { return !admin.loading(); }));
+
+    admin.deleteQuestion("q-1");
+    admin.deleteQuestion("q-2");
+    EXPECT_EQ(admin.questionCount(), 0);
+    ASSERT_TRUE(waitUntil([&]() { return requests.contains("DELETE /api/admin/questions/q-1"); }));
+    EXPECT_FALSE(requests.contains("DELETE /api/admin/questions/q-2"));
+
+    // Undo now only concerns the last one.
+    admin.undoDelete();
     ASSERT_EQ(admin.questionCount(), 1);
     EXPECT_EQ(cell(admin.questions(), 0, QuestionListModel::QuestionIdRole).toStdString(), "q-2");
-    ASSERT_TRUE(waitUntil([&]() { return requests.contains("DELETE /api/admin/questions/q-1"); }));
 }
 
 TEST_F(ViewModelTest, AdminActiveSwitchIsRevertedWhenTheServerRefuses) {

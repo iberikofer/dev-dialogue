@@ -132,6 +132,7 @@ AppPage {
 
             // Column headers
             Rectangle {
+                visible: adminVM.loading || adminVM.questionCount > 0
                 Layout.fillWidth: true
                 implicitHeight: 42
                 color: Theme.alpha(Theme.zinc950, 0.6)
@@ -184,7 +185,8 @@ AppPage {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 12
-                Item { Layout.fillHeight: true }
+                // fillWidth lets the column span the table so its content centres.
+                Item { Layout.fillWidth: true; Layout.fillHeight: true }
                 AppText {
                     Layout.alignment: Qt.AlignHCenter
                     text: qsTr("No questions for this track yet")

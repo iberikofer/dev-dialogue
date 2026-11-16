@@ -2,8 +2,11 @@
 
 #include <QAbstractItemModel>
 #include <QObject>
+#include <QSet>
 #include <QString>
+#include <QTimer>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "services/AdminService.hpp"
@@ -35,6 +38,7 @@ class AdminViewModel : public QObject, public support::BackendAware {
 public:
     explicit AdminViewModel(std::shared_ptr<services::AdminService> adminService,
                             std::shared_ptr<services::AuthService> authService, QObject* parent = nullptr);
+    ~AdminViewModel() override;
 
     QAbstractItemModel* questions() { return &m_questions; }
     int questionCount() const { return m_questions.count(); }
@@ -57,7 +61,14 @@ public:
     // Adds a question; emits questionCreated() when it is in the list.
     Q_INVOKABLE void createQuestion(const QString& direction, const QString& level, const QString& topic,
                                     const QString& questionText);
+    // Takes the question out of the list at once and emits questionDeleted();
+    // the server is told only when the undo window has passed.
     Q_INVOKABLE void deleteQuestion(const QString& id);
+    // Puts the question that is waiting to be deleted back in its row.
+    Q_INVOKABLE void undoDelete();
+
+    // How long a deleted question can be restored (tests shorten it).
+    void setUndoWindow(int milliseconds) { m_undoTimer.setInterval(milliseconds); }
     Q_INVOKABLE void setQuestionActive(const QString& id, bool active);
 
 signals:
@@ -69,17 +80,35 @@ signals:
     void errorMessageChanged();
     void uiLanguageChanged();
     void questionCreated();
+    void questionDeleted(const QString& topic);
+    // The server kept the question, so it is back in the list. reason is the
+    // server's message, empty when the server could not be reached.
+    void questionDeleteFailed(const QString& topic, const QString& reason);
 
 private:
+    struct PendingDelete {
+        int row;
+        models::QuestionBankItem item;
+    };
+
+    // Sends the delete that is waiting out its undo window, if any.
+    void commitPendingDelete();
     void applyDemoQuestions();
     void setLoading(bool value);
     void setSubmitting(bool submitting);
     void setErrorMessage(const QString& message);
     void setPaging(int page, int totalPages, int totalCount);
+    // Keeps "N questions" in step with rows added or removed here.
+    void adjustTotalCount(int delta);
 
     std::shared_ptr<services::AdminService> m_adminService;
     std::shared_ptr<services::AuthService> m_authService;
     QuestionListModel m_questions;
+    QTimer m_undoTimer;
+    std::optional<PendingDelete> m_pendingDelete;
+    // Deletes sent to the server and not answered yet; a page loaded
+    // meanwhile must not bring them back.
+    QSet<QString> m_deletingIds;
     QString m_directionFilter;
     QString m_errorMessage;
     QString m_uiLanguage{QStringLiteral("en")};
