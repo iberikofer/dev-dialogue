@@ -977,6 +977,34 @@ TEST_F(ViewModelTest, AdminSecondDeleteSendsTheFirstOneAtOnce) {
     EXPECT_EQ(cell(admin.questions(), 0, QuestionListModel::QuestionIdRole).toStdString(), "q-2");
 }
 
+TEST_F(ViewModelTest, AdminSendsAWaitingDeleteAtOnceWhenAskedBeforeClosing) {
+    serve([](const Request& request) {
+        if (request.method == "DELETE") {
+            return jsonResponse(200, nlohmann::json::object());
+        }
+        models::PagedResult<models::QuestionBankItem> page;
+        page.items = {bankQuestion("q-1", models::InterviewDirection::Frontend)};
+        page.totalCount = 1;
+        return jsonResponse(200, page);
+    });
+
+    AdminViewModel admin(adminService, authService);
+    admin.setUndoWindow(60000);
+    admin.refresh();
+    ASSERT_TRUE(waitUntil([&]() { return !admin.loading(); }));
+
+    // Nothing waiting: the window can close straight away.
+    EXPECT_FALSE(admin.sendPendingDeletes());
+
+    int settled = 0;
+    QObject::connect(&admin, &AdminViewModel::deletesSettled, &admin, [&]() { ++settled; });
+    admin.deleteQuestion("q-1");
+    EXPECT_TRUE(admin.sendPendingDeletes());
+    ASSERT_TRUE(waitUntil([&]() { return settled == 1; }));
+    EXPECT_TRUE(requests.contains("DELETE /api/admin/questions/q-1"));
+    EXPECT_FALSE(admin.sendPendingDeletes());
+}
+
 TEST_F(ViewModelTest, AdminActiveSwitchIsRevertedWhenTheServerRefuses) {
     serve([](const Request& request) {
         if (request.method == "PUT") {

@@ -36,7 +36,9 @@ AdminViewModel::AdminViewModel(std::shared_ptr<services::AdminService> adminServ
 }
 
 AdminViewModel::~AdminViewModel() {
-    // Closing the app inside the undo window still deletes the question.
+    // Last attempt for a delete still inside its undo window. The process is
+    // exiting, so the request may never leave; closing the window sends it
+    // earlier and waits for the answer (sendPendingDeletes()).
     commitPendingDelete();
 }
 
@@ -213,6 +215,11 @@ void AdminViewModel::undoDelete() {
     emit questionsChanged();
 }
 
+bool AdminViewModel::sendPendingDeletes() {
+    commitPendingDelete();
+    return !m_deletingIds.isEmpty();
+}
+
 void AdminViewModel::commitPendingDelete() {
     m_undoTimer.stop();
     if (!m_pendingDelete.has_value()) {
@@ -233,7 +240,10 @@ void AdminViewModel::commitPendingDelete() {
             return;
         }
         self->m_deletingIds.remove(id);
-        if (success) {
+        if (self->m_deletingIds.isEmpty()) {
+            emit self->deletesSettled();
+        }
+        if (success || !self) {
             return;
         }
         // The question is still on the server: show it again, unless a page

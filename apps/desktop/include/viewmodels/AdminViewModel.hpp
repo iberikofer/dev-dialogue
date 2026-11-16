@@ -66,6 +66,10 @@ public:
     Q_INVOKABLE void deleteQuestion(const QString& id);
     // Puts the question that is waiting to be deleted back in its row.
     Q_INVOKABLE void undoDelete();
+    // Sends the delete still waiting out its undo window now, e.g. when the
+    // window closes. Returns true while deletes are on their way to the
+    // server; deletesSettled() follows once they are all answered.
+    Q_INVOKABLE bool sendPendingDeletes();
 
     // How long a deleted question can be restored (tests shorten it).
     void setUndoWindow(int milliseconds) { m_undoTimer.setInterval(milliseconds); }
@@ -84,6 +88,8 @@ signals:
     // The server kept the question, so it is back in the list. reason is the
     // server's message, empty when the server could not be reached.
     void questionDeleteFailed(const QString& topic, const QString& reason);
+    // Every delete sent to the server has been answered.
+    void deletesSettled();
 
 private:
     struct PendingDelete {

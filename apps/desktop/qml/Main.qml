@@ -205,6 +205,27 @@ ApplicationWindow {
                        : qsTr("\u201c%1\u201d was not deleted: the server could not be reached.").arg(topic),
                        "error")
         }
+        function onDeletesSettled() {
+            if (rootWindow.closeAfterDeletes)
+                rootWindow.close()
+        }
+    }
+
+    // A question deleted moments ago is still inside its undo window and the
+    // server does not know yet. Closing sends the delete and waits for the
+    // answer (a few seconds at most) so the question does not come back.
+    property bool closeAfterDeletes: false
+    onClosing: (close) => {
+        if (!closeAfterDeletes && adminVM.sendPendingDeletes()) {
+            close.accepted = false
+            closeAfterDeletes = true
+            closeAnyway.start()
+        }
+    }
+    Timer {
+        id: closeAnyway
+        interval: 4000
+        onTriggered: rootWindow.close()
     }
 
     SplashOverlay {
