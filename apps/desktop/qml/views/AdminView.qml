@@ -45,7 +45,8 @@ AppPage {
     }
 
     title: qsTr("Question bank")
-    subtitle: qsTr("%1 questions  ·  questions the interviewer draws from").arg(adminVM.totalCount)
+    subtitle: adminVM.totalCount === 1 ? qsTr("1 question the interviewer draws from")
+                                       : qsTr("%1 questions the interviewer draws from").arg(adminVM.totalCount)
     badgeText: adminVM.isDemoData ? qsTr("Demo data") : ""
 
     actions: [
@@ -500,7 +501,7 @@ AppPage {
             id: questionField
             Layout.fillWidth: true
             appearance: "solid"
-            placeholderText: qsTr("Enter technical question prompt...")
+            placeholderText: qsTr("e.g. How does the browser decide when to repaint a page?")
             invalid: addDialog.attempted && !addDialog.questionValid
         }
         FieldError {

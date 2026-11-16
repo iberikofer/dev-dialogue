@@ -1042,7 +1042,7 @@ TEST_F(ViewModelTest, AccountFollowsTheSignedInUser) {
     authService->mockLogin(models::UserRole::User);
 
     EXPECT_EQ(profileChanges, 1);
-    EXPECT_EQ(account.displayName().toStdString(), "Mock Candidate");
+    EXPECT_EQ(account.displayName().toStdString(), "Demo candidate");
     EXPECT_EQ(account.email().toStdString(), "candidate@devdialogue.local");
     EXPECT_EQ(account.role().toStdString(), "user");
     EXPECT_TRUE(account.isDemoAccount());

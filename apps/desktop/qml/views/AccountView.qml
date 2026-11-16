@@ -188,7 +188,7 @@ AppPage {
             Repeater {
                 model: [
                     { keys: "Ctrl+1", action: qsTr("Home") },
-                    { keys: "Ctrl+N", action: qsTr("New interview") },
+                    { keys: "Ctrl+N, Ctrl+2", action: qsTr("New interview") },
                     { keys: "Ctrl+3", action: qsTr("Current interview") },
                     { keys: "Ctrl+,", action: qsTr("Account") },
                     { keys: "Ctrl+B", action: qsTr("Collapse or expand the sidebar") },
@@ -201,7 +201,7 @@ AppPage {
                     Layout.fillWidth: true
                     spacing: 12
                     Rectangle {
-                        implicitWidth: 104
+                        implicitWidth: 128
                         implicitHeight: 26
                         radius: Theme.radiusXs
                         color: Theme.zinc900

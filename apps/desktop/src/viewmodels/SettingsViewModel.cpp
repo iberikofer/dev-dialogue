@@ -24,6 +24,11 @@ QString SettingsViewModel::displayName() const {
     if (!user.has_value()) {
         return QString();
     }
+    // The demo accounts carry placeholder names; call them what the sign-in
+    // buttons call them.
+    if (user->id == DemoUserId) {
+        return m_authService->isAdmin() ? tr("Demo admin") : tr("Demo candidate");
+    }
     if (user->fullName.has_value() && !user->fullName->empty()) {
         return QString::fromStdString(*user->fullName);
     }

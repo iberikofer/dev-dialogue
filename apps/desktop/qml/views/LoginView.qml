@@ -154,7 +154,7 @@ Item {
 
                     AppText {
                         Layout.fillWidth: true
-                        text: view.signUp ? qsTr("Create an account") : qsTr("Sign in")
+                        text: view.signUp ? qsTr("Create an account") : qsTr("Welcome back")
                         font.pixelSize: Typography.xl
                         font.weight: Typography.bold
                     }
