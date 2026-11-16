@@ -38,10 +38,12 @@ Rectangle {
         strength: 0.18
     }
 
+    // The name and the line under it read as one group; the icon above and
+    // the progress line below stand apart from it.
     ColumnLayout {
         id: content
         anchors.centerIn: parent
-        spacing: 18
+        spacing: 0
         opacity: 0
         scale: 0.94
 
@@ -56,21 +58,23 @@ Rectangle {
         }
         AppText {
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 22
             text: "Dev Dialogue"
             font.pixelSize: Typography.xl3
             font.weight: Typography.bold
             font.letterSpacing: Typography.tracking(Typography.xl3, Typography.trackingTight)
         }
-        MonoText {
+        AppText {
             Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 8
             text: qsTr("AI technical interview simulator")
-            color: Theme.textMuted
+            color: Theme.zinc400
         }
 
         // Progress line
         Rectangle {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
+            Layout.topMargin: 32
             Layout.preferredWidth: 160
             Layout.preferredHeight: 3
             radius: 2
@@ -96,15 +100,22 @@ Rectangle {
         running: true
         ParallelAnimation {
             NumberAnimation { target: content; property: "opacity"; to: 1; duration: 420; easing.type: Easing.OutCubic }
-            NumberAnimation { target: content; property: "scale"; to: 1; duration: 520; easing.type: Easing.OutBack }
+            // Settles into place without overshooting.
+            NumberAnimation { target: content; property: "scale"; to: 1; duration: 700; easing.type: Easing.OutExpo }
             NumberAnimation { target: bar; property: "width"; to: 160; duration: splash.holdMs; easing.type: Easing.InOutCubic }
         }
+        // Let the full line register before the app takes over.
+        PauseAnimation { duration: 160 }
         ScriptAction { script: outro.start() }
     }
 
+    // The mark eases forward as the overlay fades, handing over to the app.
     SequentialAnimation {
         id: outro
-        NumberAnimation { target: splash; property: "opacity"; to: 0; duration: 320; easing.type: Easing.InCubic }
+        ParallelAnimation {
+            NumberAnimation { target: splash; property: "opacity"; to: 0; duration: 320; easing.type: Easing.InCubic }
+            NumberAnimation { target: content; property: "scale"; to: 1.03; duration: 320; easing.type: Easing.OutCubic }
+        }
         ScriptAction { script: splash.finished() }
     }
 }
