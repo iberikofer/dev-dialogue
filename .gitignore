@@ -76,6 +76,8 @@ yarn-error.log*
 # Local AI Debug & Scratch Files (.ai folder rule)
 .ai/
 .agents/
+AGENTS.md
+3D Face Import/
 
 # OS / Misc
 *.local

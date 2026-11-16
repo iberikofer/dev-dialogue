@@ -103,12 +103,19 @@ public class InterviewsController : ControllerBase
             });
         }
 
-        // Lookup starting topic from QuestionBank if available
+        // Lookup starting topic from QuestionBank if available (exact level first, then direction fallback)
+        var directionKey = dto.Direction.ToLowerInvariant();
+        var levelKey = dto.Level.ToLowerInvariant();
         var seedQuestion = await _context.QuestionsBank
             .AsNoTracking()
-            .Where(q => q.Direction == dto.Direction.ToLowerInvariant() && q.Level == dto.Level.ToLowerInvariant() && q.IsActive)
+            .Where(q => q.Direction == directionKey && q.Level == levelKey && q.IsActive)
             .OrderBy(_ => EF.Functions.Random())
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync()
+            ?? await _context.QuestionsBank
+                .AsNoTracking()
+                .Where(q => q.Direction == directionKey && q.IsActive)
+                .OrderBy(_ => EF.Functions.Random())
+                .FirstOrDefaultAsync();
 
         var firstQuestion = await _aiService.GenerateFirstQuestionAsync(dto, seedQuestion?.Topic);
 

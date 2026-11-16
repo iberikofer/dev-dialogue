@@ -9,6 +9,8 @@ AppPage {
     id: page
 
     active: StackLayout.isCurrentItem
+    onActiveChanged: if (active) backendVM.refreshDbMode()
+    Component.onCompleted: backendVM.refreshDbMode()
     title: qsTr("Account")
     subtitle: qsTr("Your profile, connection and shortcuts.")
     scrollable: true
@@ -171,6 +173,47 @@ AppPage {
                 implicitHeight: 34
                 enabled: !backendVM.isChecking
                 onClicked: backendVM.checkHealth()
+            }
+        }
+
+        // Runtime database switch (Encrypted SQLite vs Default Postgres/InMemory)
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 6
+            spacing: 12
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 2
+                RowLayout {
+                    spacing: 8
+                    AppText {
+                        text: qsTr("Encrypted SQLite database")
+                        font.weight: Typography.medium
+                    }
+                    Badge {
+                        visible: backendVM.useSqlite
+                        tone: "emerald"
+                        mono: true
+                        text: "SQLCipher AES-256"
+                        fontSize: Typography.tiny
+                    }
+                }
+                AppText {
+                    Layout.fillWidth: true
+                    text: backendVM.isOffline
+                        ? qsTr("Available when connected to the server.")
+                        : (backendVM.databaseProvider.length > 0
+                            ? backendVM.databaseProvider
+                            : qsTr("Switch between default storage and encrypted SQLite."))
+                    color: Theme.zinc400
+                    font.pixelSize: Typography.xs
+                    wrapMode: Text.WordWrap
+                }
+            }
+            ToggleSwitch {
+                enabled: !backendVM.isOffline && !backendVM.isSwitchingDb
+                checked: backendVM.useSqlite
+                onToggled: backendVM.toggleDatabaseMode()
             }
         }
     }

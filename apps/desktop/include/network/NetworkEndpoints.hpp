@@ -7,6 +7,7 @@ namespace devdialogue::network::endpoints {
 namespace api {
 inline const QString HealthPing = "/api/health/ping";
 inline const QString Health = "/health";
+inline const QString HealthDbMode = "/api/health/db-mode";
 inline const QString AuthMe = "/api/auth/me";
 inline const QString Options = "/api/options";
 

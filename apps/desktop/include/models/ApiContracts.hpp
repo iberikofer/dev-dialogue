@@ -814,4 +814,28 @@ inline void from_json(const nlohmann::json& j, OptionsResponse& o) {
     if (j.contains("languages")) j.at("languages").get_to(o.languages);
 }
 
+struct DbModeStatus {
+    std::string mode;
+    bool useSqlite{false};
+    bool encrypted{false};
+    std::string cipher;
+    std::string database;
+};
+
+struct DbModeSwitchRequest {
+    std::string provider;
+};
+
+inline void to_json(nlohmann::json& j, const DbModeSwitchRequest& r) {
+    j = nlohmann::json{{"provider", r.provider}};
+}
+
+inline void from_json(const nlohmann::json& j, DbModeStatus& s) {
+    if (j.contains("mode") && !j.at("mode").is_null()) j.at("mode").get_to(s.mode);
+    if (j.contains("useSqlite") && !j.at("useSqlite").is_null()) j.at("useSqlite").get_to(s.useSqlite);
+    if (j.contains("encrypted") && !j.at("encrypted").is_null()) j.at("encrypted").get_to(s.encrypted);
+    if (j.contains("cipher") && !j.at("cipher").is_null()) j.at("cipher").get_to(s.cipher);
+    if (j.contains("database") && !j.at("database").is_null()) j.at("database").get_to(s.database);
+}
+
 } // namespace devdialogue::models

@@ -45,12 +45,31 @@ if (!string.IsNullOrWhiteSpace(renderPort))
     builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
 }
 
-// Database Configuration (PostgreSQL with in-memory fallback)
+// Database Configuration (PostgreSQL with in-memory fallback, plus runtime encrypted SQLite switch)
+SqliteMirrorExtensions.EnsureSqlCipherInitialized();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                     ?? Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+var sqliteFilePath = SqliteMirrorExtensions.GetSqliteCopyPath(builder.Environment.ContentRootPath);
+var initialSqliteConn = SqliteMirrorExtensions.BuildEncryptedSqliteConnectionString(
+    builder.Configuration,
+    builder.Environment.ContentRootPath,
+    connectionString);
+
+builder.Services.AddSingleton(new DatabaseModeState(
+    SqliteMirrorExtensions.ShouldUseSqlite(builder.Configuration, connectionString),
+    sqliteFilePath,
+    initialSqliteConn));
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
+    var modeState = sp.GetRequiredService<DatabaseModeState>();
+    if (modeState.UseSqlite)
+    {
+        options.UseSqlite(modeState.SqliteConnectionString);
+        return;
+    }
+
     var isPostgresConfigured = !string.IsNullOrWhiteSpace(connectionString)
                             && (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
                              || connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase));
@@ -266,11 +285,19 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapSqliteCopyEndpoints();
 
 // Seed Initial Data (if QuestionBank is empty)
 using (var scope = app.Services.CreateScope())
 {
+    var modeState = scope.ServiceProvider.GetRequiredService<DatabaseModeState>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    if (modeState.UseSqlite)
+    {
+        await db.Database.EnsureCreatedAsync();
+        app.Logger.LogInformation("Database mode: Encrypted SQLite ({SqliteFile})", modeState.SqliteFilePath);
+    }
+
     if (!db.QuestionsBank.Any())
     {
         db.QuestionsBank.AddRange(
@@ -309,6 +336,8 @@ using (var scope = app.Services.CreateScope())
         );
         db.SaveChanges();
     }
+
+    await SqliteMirrorExtensions.SyncSqliteCopyAsync(db, modeState.SqliteConnectionString, modeState.SqliteFilePath);
 }
 
 app.Run();
