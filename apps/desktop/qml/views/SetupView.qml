@@ -114,6 +114,7 @@ AppPage {
                                 }
                                 ColumnLayout {
                                     Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignTop
                                     spacing: 4
                                     AppText {
                                         Layout.fillWidth: true
@@ -164,6 +165,8 @@ AppPage {
                                     font.pixelSize: Typography.xs
                                     wrapMode: Text.WordWrap
                                 }
+                                // Keeps the title at the top when a neighbour's subtitle wraps.
+                                Item { Layout.fillHeight: true }
                             }
                         }
                     }

@@ -290,6 +290,7 @@ AppPage {
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: row.isActive
                                 onToggled: adminVM.setQuestionActive(row.questionId, checked)
+                                Accessible.name: qsTr("Used in interviews")
                                 AppToolTip {
                                     visible: activeSwitch.hovered
                                     text: row.isActive ? qsTr("Used in interviews") : qsTr("Not used in interviews")
@@ -308,6 +309,7 @@ AppPage {
                                 hoverEnabled: true
                                 opacity: rowHover.hovered || hovered ? 1 : 0.4
                                 onClicked: adminVM.deleteQuestion(row.questionId)
+                                Accessible.name: qsTr("Delete question")
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                                 AppToolTip {
                                     delay: 400

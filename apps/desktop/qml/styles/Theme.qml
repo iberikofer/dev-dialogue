@@ -96,7 +96,7 @@ QtObject {
     readonly property color primary: blue600
     readonly property color primaryHover: blue500
     readonly property color primaryBorder: alpha(blue400, 0.3)
-    readonly property color focusRing: alpha(blue500, 0.5)
+    readonly property color focusRing: alpha(blue400, 0.9)
 
     readonly property color accentBlue: blue500
     readonly property color accentRose: rose500

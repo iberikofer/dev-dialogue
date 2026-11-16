@@ -86,6 +86,9 @@ TextField {
         }
         HoverHandler { id: revealHover; cursorShape: Qt.PointingHandCursor }
         TapHandler { onTapped: field.revealed = !field.revealed }
+        Accessible.role: Accessible.Button
+        Accessible.name: field.revealed ? qsTr("Hide password") : qsTr("Show password")
+        Accessible.onPressAction: field.revealed = !field.revealed
 
         AppToolTip {
             visible: revealHover.hovered

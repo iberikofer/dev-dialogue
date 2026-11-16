@@ -35,19 +35,26 @@ AppPage {
     ]
 
     actions: [
-        TactileButton {
-            id: finishButton
-            variant: "success"
-            text: chatVM.isCompleting ? qsTr("Generating report...") : qsTr("Finish & get report")
-            iconLeft: chatVM.isCompleting ? "" : "circle-check-big"
-            busy: chatVM.isCompleting
-            implicitHeight: 40
-            enabled: !chatVM.isCompleting && !chatVM.isBusy && chatVM.candidateAnswersCount > 0
-            opacity: enabled || chatVM.isCompleting ? 1.0 : 0.4
-            onClicked: chatVM.completeInterview()
+        // A disabled button gets no hover, so the hint listens on a wrapper.
+        Item {
+            implicitWidth: finishButton.implicitWidth
+            implicitHeight: finishButton.implicitHeight
+            HoverHandler { id: finishHover }
+            TactileButton {
+                id: finishButton
+                anchors.fill: parent
+                variant: "success"
+                text: chatVM.isCompleting ? qsTr("Generating report...") : qsTr("Finish & get report")
+                iconLeft: chatVM.isCompleting ? "" : "circle-check-big"
+                busy: chatVM.isCompleting
+                implicitHeight: 40
+                enabled: !chatVM.isCompleting && !chatVM.isBusy && chatVM.candidateAnswersCount > 0
+                opacity: enabled || chatVM.isCompleting ? 1.0 : 0.4
+                onClicked: chatVM.completeInterview()
+            }
             AppToolTip {
                 delay: 300
-                visible: finishButton.hovered && chatVM.candidateAnswersCount === 0
+                visible: finishHover.hovered && chatVM.candidateAnswersCount === 0
                 text: qsTr("Answer at least one question first")
             }
         }
@@ -199,6 +206,7 @@ AppPage {
             enabled: input.text.trim().length > 0 && !chatVM.isBusy && !chatVM.isCompleting
             opacity: enabled ? 1.0 : 0.3
             onClicked: page.send()
+            Accessible.name: qsTr("Send answer")
             AppToolTip {
                 visible: sendButton.hovered
                 text: qsTr("Send (Enter)")

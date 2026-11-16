@@ -175,8 +175,10 @@ Rectangle {
             hoverEnabled: true
             enabled: !backendVM.isChecking
             onClicked: backendVM.checkHealth()
+            Accessible.name: statusTip.text
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             AppToolTip {
+                id: statusTip
                 side: sidebar.expanded ? "top" : "right"
                 delay: 300
                 visible: status.hovered
@@ -234,6 +236,7 @@ Rectangle {
             implicitHeight: 32
             hoverEnabled: true
             onClicked: sidebar.expanded = !sidebar.expanded
+            Accessible.name: sidebar.expanded ? qsTr("Collapse sidebar") : qsTr("Expand sidebar")
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             AppToolTip {
                 side: sidebar.expanded ? "top" : "right"

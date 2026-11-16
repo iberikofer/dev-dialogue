@@ -17,6 +17,13 @@ Item {
 
     implicitHeight: row.implicitHeight
 
+    // Plain text as HTML, so the selectable text keeps the relaxed line height.
+    function asHtml(text) {
+        const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                            .replace(/\n/g, "<br>")
+        return "<div style=\"line-height:" + Math.round(Typography.leadingRelaxed * 100) + "%\">" + escaped + "</div>"
+    }
+
     // Entrance: fade-in-up for each new message.
     opacity: 0
     transform: Translate { id: shift; y: 8 }
@@ -83,13 +90,21 @@ Item {
                 width: parent.width - 32
                 spacing: 6
 
-                AppText {
+                TextEdit {
                     id: body
                     Layout.fillWidth: true
-                    text: root.content
+                    text: root.asHtml(root.content)
+                    textFormat: TextEdit.RichText
+                    readOnly: true
+                    selectByMouse: true
+                    wrapMode: TextEdit.Wrap
                     color: root.isAssistant ? Theme.zinc200 : Theme.textOnAccent
-                    lineHeight: Typography.leadingRelaxed
-                    wrapMode: Text.Wrap
+                    selectionColor: root.isAssistant ? Theme.alpha(Theme.blue500, 0.45) : Theme.alpha(Theme.zinc950, 0.45)
+                    selectedTextColor: Theme.textOnAccent
+                    font.family: Theme.fontSans
+                    font.pixelSize: Typography.sm
+                    Accessible.name: root.content
+                    HoverHandler { cursorShape: Qt.IBeamCursor }
                 }
                 MonoText {
                     id: time
