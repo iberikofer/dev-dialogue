@@ -7,7 +7,13 @@
   "dependencies": [
     {
       "name": "qtbase",
-      "features": ["network", "gui", "widgets", "concurrent", "ssl"]
+      "features": [
+        "network",
+        "gui",
+        "widgets",
+        "concurrent",
+        "openssl"
+      ]
     },
     {
       "name": "qtdeclarative"
@@ -25,7 +31,11 @@
     {
       "name": "gtest",
       "version>=": "1.14.0"
+    },
+    {
+    "name": "qtkeychain-qt6",
+    "version>=": "0.14.3"
     }
-  ]
+  ],
+  "builtin-baseline": "f012ddcdad91089f118e97033a15a47e4dcd3c0f"
 }
-

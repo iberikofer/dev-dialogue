@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Application icon. Same motif as the web logo (speech bubble, code
+       brackets and a voice wave), redrawn as clean vectors so it stays sharp
+       down to 16 px. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141b2d"/>
+      <stop offset="1" stop-color="#090c14"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="0.5" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#3b82f6" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#tile)"/>
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#glow)"/>
+  <rect x="9" y="9" width="238" height="238" rx="55" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+  <g fill="none" stroke="url(#ink)" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="14" d="M72 52 H184 A28 28 0 0 1 212 80 V152 A28 28 0 0 1 184 180 H104 L72 210 V180 A28 28 0 0 1 44 152 V80 A28 28 0 0 1 72 52 Z"/>
+    <path stroke-width="13" d="M86 96 L66 116 L86 136"/>
+    <path stroke-width="13" d="M170 96 L190 116 L170 136"/>
+    <path stroke-width="11" d="M98 116 H108 L117 94 L128 140 L139 102 L147 116 H158"/>
+  </g>
+</svg>
