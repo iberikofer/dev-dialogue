@@ -78,10 +78,16 @@ void ReportViewModel::load(const QString& interviewId) {
     m_interviewId = interviewId;
     setLoading(true);
 
-    // Interviews finished offline exist only in the demo history.
-    if (!m_interviewService || isOfflineSessionId(interviewId) || demo::finishedInterview(interviewId) != nullptr ||
-        !backendLikelyOnline()) {
+    // Sample interviews and interviews finished offline exist only in the
+    // demo history.
+    if (isOfflineSessionId(interviewId) || demo::finishedInterview(interviewId) != nullptr) {
         applyDemo(interviewId);
+        return;
+    }
+    // Any other interview lives on the server; a stand-in report would show
+    // numbers that are not its own.
+    if (!m_interviewService || !backendLikelyOnline()) {
+        fail(tr("The server can't be reached, so this report can't be loaded."));
         return;
     }
 
@@ -93,7 +99,14 @@ void ReportViewModel::load(const QString& interviewId) {
             }
             const auto* detail = std::get_if<models::InterviewDetail>(&result);
             if (detail == nullptr) {
-                self->applyDemo(self->m_interviewId);
+                const auto& error = std::get<models::ApiError>(result);
+                if (error.isNetworkDown) {
+                    self->fail(tr("The server can't be reached, so this report can't be loaded."));
+                } else if (!error.message.empty()) {
+                    self->fail(tr("The report could not be loaded: %1").arg(QString::fromStdString(error.message)));
+                } else {
+                    self->fail(tr("The report could not be loaded."));
+                }
                 return;
             }
             self->setContext(*detail);
@@ -146,6 +159,18 @@ void ReportViewModel::apply(const models::InterviewFeedbackReport& report, bool 
     m_report = report;
     m_isDemoData = isDemo;
     m_hasReport = true;
+    m_errorMessage.clear();
+    emit reportChanged();
+    setLoading(false);
+}
+
+void ReportViewModel::fail(const QString& message) {
+    m_report = {};
+    m_isDemoData = false;
+    m_hasReport = false;
+    m_followsUiLanguage = false;
+    m_errorMessage = message;
+    setContext({});
     emit reportChanged();
     setLoading(false);
 }

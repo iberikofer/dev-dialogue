@@ -624,6 +624,39 @@ TEST_F(ViewModelTest, ReportScoresTheTranscriptWhenTheInterviewHasNoFeedbackYet)
               "What is an index?");
 }
 
+TEST_F(ViewModelTest, ReportOfAServerInterviewThatFailsToLoadShowsAnError) {
+    serve([](const Request&) { return jsonResponse(500, {{"message", "Database unavailable"}}); });
+
+    ReportViewModel report(interviewService);
+    report.load("interview-42");
+    ASSERT_TRUE(waitUntil([&]() { return !report.loading(); }));
+
+    // No stand-in numbers for an interview that has its own.
+    EXPECT_FALSE(report.hasReport());
+    EXPECT_FALSE(report.isDemoData());
+    EXPECT_TRUE(report.questionScores().isEmpty());
+    EXPECT_TRUE(report.errorMessage().contains("Database unavailable"));
+}
+
+TEST_F(ViewModelTest, ReportOfAServerInterviewNeedsTheServer) {
+    serve([](const Request&) { return jsonResponse(200, nlohmann::json::object()); });
+
+    ReportViewModel report(interviewService);
+    report.setBackendOnlineProbe([]() { return false; });
+    report.load("interview-42");
+
+    EXPECT_FALSE(report.loading());
+    EXPECT_FALSE(report.hasReport());
+    EXPECT_FALSE(report.errorMessage().isEmpty());
+    QCoreApplication::processEvents();
+    EXPECT_TRUE(requests.isEmpty());
+
+    // A report that loads afterwards clears the error.
+    report.load("mock-1");
+    EXPECT_TRUE(report.hasReport());
+    EXPECT_TRUE(report.errorMessage().isEmpty());
+}
+
 TEST_F(ViewModelTest, ReportOfAnOfflineInterviewIsBuiltFromItsTranscript) {
     NavigationViewModel navigation;
     ChatViewModel chat(interviewService, &navigation);

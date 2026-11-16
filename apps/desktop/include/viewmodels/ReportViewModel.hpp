@@ -30,6 +30,8 @@ class ReportViewModel : public QObject, public support::BackendAware {
     Q_PROPERTY(QString direction READ direction NOTIFY reportChanged)
     Q_PROPERTY(QString level READ level NOTIFY reportChanged)
     Q_PROPERTY(QString dateText READ dateText NOTIFY reportChanged)
+    // Why the report of a server interview could not be loaded; empty otherwise.
+    Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY reportChanged)
     // Language of the sample report shown when the backend is unreachable.
     Q_PROPERTY(QString uiLanguage READ uiLanguage WRITE setUiLanguage NOTIFY uiLanguageChanged)
 
@@ -49,12 +51,14 @@ public:
     QString direction() const { return m_direction; }
     QString level() const { return m_level; }
     QString dateText() const { return m_dateText; }
+    QString errorMessage() const { return m_errorMessage; }
     QString uiLanguage() const { return m_uiLanguage; }
     void setUiLanguage(const QString& language);
 
-    // Loads the feedback of the given interview. Without a backend the demo
-    // history provides it; an interview the server has not evaluated yet is
-    // scored from its transcript.
+    // Loads the feedback of the given interview. Demo and offline interviews
+    // come from the demo history; an interview the server has not evaluated
+    // yet is scored from its transcript. A server interview that cannot be
+    // fetched sets errorMessage instead of showing a report.
     Q_INVOKABLE void load(const QString& interviewId);
 
 signals:
@@ -66,6 +70,7 @@ private:
     void setLoading(bool value);
     void apply(const models::InterviewFeedbackReport& report, bool isDemo);
     void applyDemo(const QString& interviewId);
+    void fail(const QString& message);
     void setContext(const models::InterviewSummary& interview);
 
     std::shared_ptr<services::InterviewService> m_interviewService;
@@ -75,6 +80,7 @@ private:
     QString m_direction;
     QString m_level;
     QString m_dateText;
+    QString m_errorMessage;
     int m_generation{0};
     bool m_loading{false};
     bool m_hasReport{false};

@@ -16,10 +16,14 @@ AppPage {
         function onStatusChanged() {
             if (backendVM.isOffline && reportVM.loading)
                 reportVM.load(navVM.activeInterviewId)
+            // The server is back: fetch the report that could not be loaded.
+            else if (!backendVM.isOffline && page.active && page.failed)
+                reportVM.load(navVM.activeInterviewId)
         }
     }
 
     readonly property bool ready: !reportVM.loading && reportVM.hasReport
+    readonly property bool failed: !reportVM.loading && reportVM.errorMessage !== ""
 
     // "Frontend · Junior · 16.11.2026  10:49": which interview this is.
     function trackName(direction) {
@@ -41,6 +45,7 @@ AppPage {
 
     title: qsTr("Interview report")
     subtitle: ready ? (context !== "" ? context : qsTr("How you did and what to study next."))
+                    : failed ? qsTr("The report is not available right now.")
                     : qsTr("Preparing the report…")
     badgeText: ready && reportVM.isDemoData ? qsTr("Demo data") : ""
     scrollable: true
@@ -64,13 +69,51 @@ AppPage {
 
     // ------------------------------------------------------------ Loading
     Item {
-        visible: !page.ready
+        visible: !page.ready && !page.failed
         Layout.fillWidth: true
         implicitHeight: 360
         Spinner {
             anchors.centerIn: parent
             size: 28
             color: Theme.blue400
+        }
+    }
+
+    // -------------------------------------------------------------- Error
+    // A server interview whose report could not be fetched: say so and let
+    // the user try again rather than show numbers that are not its own.
+    ColumnLayout {
+        visible: page.failed
+        Layout.fillWidth: true
+        Layout.topMargin: 96
+        spacing: 14
+
+        Icon {
+            Layout.alignment: Qt.AlignHCenter
+            name: "circle-alert"
+            size: 32
+            color: Theme.amber400
+        }
+        AppText {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.maximumWidth: 460
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            text: reportVM.errorMessage
+            color: Theme.zinc300
+        }
+        TactileButton {
+            Layout.alignment: Qt.AlignHCenter
+            Layout.topMargin: 6
+            variant: "secondary"
+            text: backendVM.isChecking ? qsTr("Checking...") : qsTr("Try again")
+            iconLeft: "refresh-cw"
+            iconSize: 14
+            implicitHeight: 36
+            enabled: !backendVM.isChecking
+            // While the server is known to be down, ask it first; the report
+            // reloads by itself once it answers.
+            onClicked: backendVM.isOffline ? backendVM.checkHealth() : reportVM.load(navVM.activeInterviewId)
         }
     }
 
