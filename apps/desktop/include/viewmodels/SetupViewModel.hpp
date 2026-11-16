@@ -6,12 +6,13 @@
 
 #include "services/InterviewService.hpp"
 #include "viewmodels/NavigationViewModel.hpp"
+#include "viewmodels/ViewModelSupport.hpp"
 
 namespace devdialogue::viewmodels {
 
 // Interview configuration screen (port of the web InterviewSetup.tsx):
 // holds the chosen track, level and language and starts the session.
-class SetupViewModel : public QObject {
+class SetupViewModel : public QObject, public support::BackendAware {
     Q_OBJECT
     Q_PROPERTY(QString direction READ direction WRITE setDirection NOTIFY directionChanged)
     Q_PROPERTY(QString level READ level WRITE setLevel NOTIFY levelChanged)

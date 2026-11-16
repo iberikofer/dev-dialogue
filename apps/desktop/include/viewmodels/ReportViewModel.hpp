@@ -26,6 +26,10 @@ class ReportViewModel : public QObject, public support::BackendAware {
     Q_PROPERTY(QVariantList recommendations READ recommendations NOTIFY reportChanged)
     // Each entry: { question, score, comment }
     Q_PROPERTY(QVariantList questionScores READ questionScores NOTIFY reportChanged)
+    // Which interview the report is about: "frontend", "junior", "16.11.2026  10:49".
+    Q_PROPERTY(QString direction READ direction NOTIFY reportChanged)
+    Q_PROPERTY(QString level READ level NOTIFY reportChanged)
+    Q_PROPERTY(QString dateText READ dateText NOTIFY reportChanged)
     // Language of the sample report shown when the backend is unreachable.
     Q_PROPERTY(QString uiLanguage READ uiLanguage WRITE setUiLanguage NOTIFY uiLanguageChanged)
 
@@ -42,11 +46,15 @@ public:
     QStringList weaknesses() const;
     QVariantList recommendations() const;
     QVariantList questionScores() const;
+    QString direction() const { return m_direction; }
+    QString level() const { return m_level; }
+    QString dateText() const { return m_dateText; }
     QString uiLanguage() const { return m_uiLanguage; }
     void setUiLanguage(const QString& language);
 
-    // Loads the feedback of the given interview. Without a backend, or for
-    // an interview that has no feedback yet, the sample report is shown.
+    // Loads the feedback of the given interview. Without a backend the demo
+    // history provides it; an interview the server has not evaluated yet is
+    // scored from its transcript.
     Q_INVOKABLE void load(const QString& interviewId);
 
 signals:
@@ -57,14 +65,22 @@ signals:
 private:
     void setLoading(bool value);
     void apply(const models::InterviewFeedbackReport& report, bool isDemo);
+    void applyDemo(const QString& interviewId);
+    void setContext(const models::InterviewSummary& interview);
 
     std::shared_ptr<services::InterviewService> m_interviewService;
     models::InterviewFeedbackReport m_report;
     QString m_uiLanguage{QStringLiteral("en")};
+    QString m_interviewId;
+    QString m_direction;
+    QString m_level;
+    QString m_dateText;
     int m_generation{0};
     bool m_loading{false};
     bool m_hasReport{false};
     bool m_isDemoData{false};
+    // A sample report of the demo history follows the interface language.
+    bool m_followsUiLanguage{false};
 };
 
 } // namespace devdialogue::viewmodels

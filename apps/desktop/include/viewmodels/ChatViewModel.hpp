@@ -83,6 +83,8 @@ private:
     void appendMessage(const QString& role, const QString& content);
     void appendWelcome();
     void scheduleFallbackReply(int answersBefore);
+    // Keeps a finished local interview in the demo history.
+    void recordLocalInterview() const;
     void setBusy(bool busy);
     void setCompleting(bool completing);
     void setErrorMessage(const QString& message);
@@ -97,6 +99,7 @@ private:
     QString m_level;
     QString m_language;
     QString m_errorMessage;
+    std::string m_startedAt;
     // Incremented for every new session so late replies of an old one are ignored.
     int m_sessionToken{0};
     int m_elapsedSeconds{0};

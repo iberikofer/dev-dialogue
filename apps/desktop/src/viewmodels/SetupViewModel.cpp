@@ -61,7 +61,9 @@ void SetupViewModel::start() {
     }
     setErrorMessage(QString());
 
-    if (!m_interviewService) {
+    // With the backend known to be down, start locally at once instead of
+    // waiting for the request to time out.
+    if (!m_interviewService || !backendLikelyOnline()) {
         launch(makeOfflineSessionId(), QString(), true);
         return;
     }

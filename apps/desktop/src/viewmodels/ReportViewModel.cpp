@@ -10,9 +10,11 @@ namespace devdialogue::viewmodels {
 
 namespace {
 
-// Local demo sessions never reached the server, so there is nothing to fetch.
+// Local demo sessions and the sample interviews never reached the server,
+// so there is nothing to fetch.
 bool isOfflineSessionId(const QString& interviewId) {
-    return interviewId.isEmpty() || interviewId.startsWith(QLatin1String("session-"));
+    return interviewId.isEmpty() || interviewId.startsWith(QLatin1String("session-")) ||
+           interviewId.startsWith(QLatin1String("mock-"));
 }
 
 QStringList toStringList(const std::vector<std::string>& items) {
@@ -66,18 +68,20 @@ void ReportViewModel::setUiLanguage(const QString& language) {
     }
     m_uiLanguage = language;
     emit uiLanguageChanged();
-    // The sample report follows the interface language.
-    if (m_hasReport && m_isDemoData) {
-        apply(demo::report(m_uiLanguage), true);
+    if (m_hasReport && m_followsUiLanguage) {
+        apply(demo::report(m_interviewId, m_uiLanguage), true);
     }
 }
 
 void ReportViewModel::load(const QString& interviewId) {
     const int generation = ++m_generation;
+    m_interviewId = interviewId;
     setLoading(true);
 
-    if (!m_interviewService || isOfflineSessionId(interviewId) || !backendLikelyOnline()) {
-        apply(demo::report(m_uiLanguage), true);
+    // Interviews finished offline exist only in the demo history.
+    if (!m_interviewService || isOfflineSessionId(interviewId) || demo::finishedInterview(interviewId) != nullptr ||
+        !backendLikelyOnline()) {
+        applyDemo(interviewId);
         return;
     }
 
@@ -88,12 +92,47 @@ void ReportViewModel::load(const QString& interviewId) {
                 return;
             }
             const auto* detail = std::get_if<models::InterviewDetail>(&result);
-            if (detail != nullptr && detail->feedback.has_value()) {
+            if (detail == nullptr) {
+                self->applyDemo(self->m_interviewId);
+                return;
+            }
+            self->setContext(*detail);
+            self->m_followsUiLanguage = false;
+            if (detail->feedback.has_value()) {
                 self->apply(*detail->feedback, false);
             } else {
-                self->apply(demo::report(self->m_uiLanguage), true);
+                // Not evaluated yet: score what the transcript holds.
+                self->apply(demo::reportFromTranscript(support::enumToString(detail->direction), detail->transcript,
+                                                       support::enumToString(detail->language)),
+                            true);
             }
         });
+}
+
+void ReportViewModel::applyDemo(const QString& interviewId) {
+    models::InterviewSummary context;
+    for (const models::InterviewSummary& item : demo::interviews()) {
+        if (QString::fromStdString(item.id) == interviewId) {
+            context = item;
+            break;
+        }
+    }
+    setContext(context);
+    // Recorded interviews are reported in their own language.
+    m_followsUiLanguage = demo::finishedInterview(interviewId) == nullptr;
+    apply(demo::report(interviewId, m_uiLanguage), true);
+}
+
+void ReportViewModel::setContext(const models::InterviewSummary& interview) {
+    if (interview.id.empty()) {
+        m_direction.clear();
+        m_level.clear();
+        m_dateText.clear();
+        return;
+    }
+    m_direction = support::enumToString(interview.direction);
+    m_level = support::enumToString(interview.level);
+    m_dateText = support::formatDateTime(interview.createdAt);
 }
 
 void ReportViewModel::setLoading(bool value) {

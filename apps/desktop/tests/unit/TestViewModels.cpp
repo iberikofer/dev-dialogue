@@ -70,6 +70,8 @@ QString cell(QAbstractItemModel* model, int row, int role) {
 class ViewModelTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        // Interviews finished offline by an earlier test stay out of this one.
+        demo::clearFinishedInterviews();
         ASSERT_TRUE(server.start());
 
         config = std::make_shared<core::AppConfig>();
@@ -188,6 +190,23 @@ TEST_F(ViewModelTest, DashboardFallsBackToSampleDataWhenTheApiFails) {
     EXPECT_EQ(dashboard.interviewCount(), static_cast<int>(demo::interviews().size()));
 }
 
+TEST_F(ViewModelTest, DemoNumbersAreCountedFromTheDemoHistory) {
+    const std::vector<models::InterviewSummary> history = demo::interviews();
+    const models::UserDashboardStats stats = demo::dashboardStats();
+
+    EXPECT_EQ(stats.totalInterviews, static_cast<int>(history.size()));
+    double total = 0.0;
+    for (const models::InterviewSummary& item : history) {
+        total += item.score.value_or(0);
+    }
+    EXPECT_DOUBLE_EQ(stats.averageScore, total / static_cast<double>(history.size()));
+    EXPECT_EQ(stats.remainingToday, stats.dailyLimit - stats.dailyInterviewsCount);
+    // Every sample interview opens a report with the score shown in the history.
+    for (const models::InterviewSummary& item : history) {
+        EXPECT_EQ(demo::report(QString::fromStdString(item.id), "en").score, item.score.value_or(-1));
+    }
+}
+
 TEST_F(ViewModelTest, DashboardSkipsTheNetworkWhileTheBackendIsKnownToBeDown) {
     serve([](const Request&) { return jsonResponse(200, nlohmann::json::object()); });
 
@@ -298,6 +317,26 @@ TEST_F(ViewModelTest, SetupStartsALocalDemoSessionWhenTheBackendIsUnreachable) {
     EXPECT_EQ(navigation.currentViewIndex(), NavigationViewModel::ChatRoom);
 }
 
+TEST_F(ViewModelTest, SetupStartsLocallyAtOnceWhileTheBackendIsKnownToBeDown) {
+    serve([](const Request&) { return jsonResponse(200, nlohmann::json::object()); });
+
+    NavigationViewModel navigation;
+    SetupViewModel setup(interviewService, &navigation);
+    setup.setBackendOnlineProbe([]() { return false; });
+    bool startedOffline = false;
+    QObject::connect(&setup, &SetupViewModel::interviewStarted, &setup,
+                     [&](const QString&, const QString&, const QString&, const QString&, const QString&,
+                         bool offline) { startedOffline = offline; });
+
+    setup.start();
+
+    // No spinner while a doomed request times out.
+    EXPECT_TRUE(startedOffline);
+    EXPECT_FALSE(setup.isBusy());
+    QCoreApplication::processEvents();
+    EXPECT_TRUE(requests.isEmpty());
+}
+
 // ===========================================================================
 // ChatViewModel
 // ===========================================================================
@@ -363,7 +402,9 @@ TEST_F(ViewModelTest, ChatOfflineSessionUsesTheScriptedRepliesInOrder) {
     EXPECT_EQ(cell(chat.messagesModel(), 0, MessageListModel::ContentRole),
               demo::chatWelcome("devops", "junior", "en"));
 
-    const QStringList replies = demo::chatReplies("en");
+    // The follow-up questions belong to the chosen track.
+    const QStringList replies = demo::chatReplies("devops", "en");
+    EXPECT_NE(replies.at(0), demo::chatReplies("frontend", "en").at(0));
     chat.sendAnswer("First answer");
     ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
     EXPECT_EQ(cell(chat.messagesModel(), 2, MessageListModel::ContentRole), replies.at(0));
@@ -377,13 +418,39 @@ TEST_F(ViewModelTest, ChatOfflineSessionUsesTheScriptedRepliesInOrder) {
     EXPECT_TRUE(requests.isEmpty());
 }
 
+TEST_F(ViewModelTest, ChatFinishedOfflineInterviewJoinsTheDemoHistory) {
+    const models::UserDashboardStats before = demo::dashboardStats();
+    const size_t historyBefore = demo::interviews().size();
+
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    chat.setFallbackReplyDelay(1);
+    chat.beginSession("session-done", "qa", "middle", "en", QString(), true);
+    chat.sendAnswer("I write regression suites in Playwright and keep them in CI.");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
+    chat.completeInterview();
+
+    const models::InterviewDetail* recorded = demo::finishedInterview("session-done");
+    ASSERT_NE(recorded, nullptr);
+    EXPECT_EQ(recorded->direction, models::InterviewDirection::Qa);
+    EXPECT_EQ(recorded->level, models::InterviewLevel::Middle);
+    EXPECT_EQ(recorded->transcript.size(), 3u);
+
+    const models::UserDashboardStats after = demo::dashboardStats();
+    EXPECT_EQ(demo::interviews().size(), historyBefore + 1);
+    EXPECT_EQ(after.totalInterviews, before.totalInterviews + 1);
+    EXPECT_EQ(after.remainingToday, before.remainingToday - 1);
+    // Newest first.
+    EXPECT_EQ(demo::interviews().front().id, "session-done");
+}
+
 TEST_F(ViewModelTest, ChatKeepsTheLastScriptedReplyOnceTheScriptIsExhausted) {
     NavigationViewModel navigation;
     ChatViewModel chat(interviewService, &navigation);
     chat.setFallbackReplyDelay(1);
     chat.beginSession("session-local", "frontend", "junior", "uk", QString(), true);
 
-    const QStringList replies = demo::chatReplies("uk");
+    const QStringList replies = demo::chatReplies("frontend", "uk");
     for (int i = 0; i < replies.size() + 2; ++i) {
         chat.sendAnswer(QStringLiteral("Answer %1").arg(i));
         ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
@@ -405,7 +472,7 @@ TEST_F(ViewModelTest, ChatFallsBackToAScriptedReplyWhenSendingFails) {
     ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
 
     ASSERT_EQ(chat.messagesModel()->rowCount(), 3);
-    EXPECT_EQ(cell(chat.messagesModel(), 2, MessageListModel::ContentRole), demo::chatReplies("en").at(0));
+    EXPECT_EQ(cell(chat.messagesModel(), 2, MessageListModel::ContentRole), demo::chatReplies("frontend", "en").at(0));
     EXPECT_EQ(requests.size(), 1);
 }
 
@@ -531,15 +598,18 @@ TEST_F(ViewModelTest, ReportOfALocalDemoSessionNeedsNoBackend) {
     EXPECT_FALSE(report.loading());
     EXPECT_TRUE(report.hasReport());
     EXPECT_TRUE(report.isDemoData());
-    EXPECT_EQ(report.score(), demo::report("en").score);
+    EXPECT_EQ(report.score(), demo::report("session-k3x9p0a", "en").score);
     QCoreApplication::processEvents();
     EXPECT_TRUE(requests.isEmpty());
 }
 
-TEST_F(ViewModelTest, ReportUsesTheSampleWhenTheInterviewHasNoFeedbackYet) {
+TEST_F(ViewModelTest, ReportScoresTheTranscriptWhenTheInterviewHasNoFeedbackYet) {
     serve([](const Request&) {
         models::InterviewDetail detail;
         detail.id = "interview-42";
+        detail.direction = models::InterviewDirection::Backend;
+        detail.language = models::InterviewLanguage::En;
+        detail.transcript = {{"assistant", "Hello. What is an index?", ""}, {"user", "A lookup structure.", ""}};
         return jsonResponse(200, detail);
     });
 
@@ -548,12 +618,64 @@ TEST_F(ViewModelTest, ReportUsesTheSampleWhenTheInterviewHasNoFeedbackYet) {
     ASSERT_TRUE(waitUntil([&]() { return !report.loading(); }));
 
     EXPECT_TRUE(report.isDemoData());
-    EXPECT_EQ(report.strengths().size(), static_cast<qsizetype>(demo::report("en").strengths.size()));
+    EXPECT_EQ(report.direction().toStdString(), "backend");
+    ASSERT_EQ(report.questionScores().size(), 1);
+    EXPECT_EQ(report.questionScores().first().toMap().value("question").toString().toStdString(),
+              "What is an index?");
+}
+
+TEST_F(ViewModelTest, ReportOfAnOfflineInterviewIsBuiltFromItsTranscript) {
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    chat.setFallbackReplyDelay(1);
+    chat.beginSession("session-pm", "pm", "junior", "uk", QString(), true);
+    chat.sendAnswer(QString::fromUtf8("Працюю з беклогом два роки."));
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
+    chat.completeInterview();
+
+    ReportViewModel report(interviewService);
+    report.load("session-pm");
+
+    EXPECT_FALSE(report.loading());
+    EXPECT_TRUE(report.isDemoData());
+    EXPECT_EQ(report.direction().toStdString(), "pm");
+    EXPECT_EQ(report.level().toStdString(), "junior");
+    ASSERT_EQ(report.questionScores().size(), 1);
+    // The interviewer's welcome ends with the question that was answered.
+    const QString asked = report.questionScores().first().toMap().value("question").toString();
+    EXPECT_TRUE(demo::chatWelcome("pm", "junior", "uk").endsWith(asked));
+    // Reported in the interview language, whatever the interface shows.
+    const QString summary = report.summary();
+    report.setUiLanguage("en");
+    EXPECT_EQ(report.summary(), summary);
+    QCoreApplication::processEvents();
+    EXPECT_TRUE(requests.isEmpty());
+}
+
+TEST_F(ViewModelTest, DemoReportScoresDetailedAnswersAboveShortOnes) {
+    const std::vector<models::InterviewMessage> transcript = {
+        {"assistant", "First question?", ""},
+        {"user", "Yes.", ""},
+        {"assistant", "Second question?", ""},
+        {"user", QString("word ").repeated(60).toStdString(), ""},
+    };
+    const models::InterviewFeedbackReport result = demo::reportFromTranscript("frontend", transcript, "en");
+
+    ASSERT_EQ(result.questionScores.size(), 2u);
+    EXPECT_LT(result.questionScores[0].score, result.questionScores[1].score);
+    EXPECT_EQ(result.score, (result.questionScores[0].score + result.questionScores[1].score + 1) / 2);
+    EXPECT_EQ(result.weaknesses.size(), 1u);
+    EXPECT_EQ(result.strengths.size(), 1u);
+    EXPECT_FALSE(result.recommendations.empty());
+
+    const models::InterviewFeedbackReport empty = demo::reportFromTranscript("frontend", {}, "en");
+    EXPECT_EQ(empty.score, 0);
+    EXPECT_TRUE(empty.questionScores.empty());
 }
 
 TEST_F(ViewModelTest, ReportSampleFollowsTheInterfaceLanguage) {
     ReportViewModel report(interviewService);
-    report.load("session-local");
+    report.load("mock-1");
     const QString english = report.summary();
 
     int reportChanges = 0;
@@ -562,7 +684,7 @@ TEST_F(ViewModelTest, ReportSampleFollowsTheInterfaceLanguage) {
 
     EXPECT_EQ(reportChanges, 1);
     EXPECT_NE(report.summary(), english);
-    EXPECT_EQ(report.summary(), QString::fromStdString(demo::report("uk").summary));
+    EXPECT_EQ(report.summary(), QString::fromStdString(demo::report("mock-1", "uk").summary));
 }
 
 // ===========================================================================

@@ -90,10 +90,11 @@ AppPage {
             loading: dashboardVM.loading
             skeletonWidth: 112
 
+            // The ring shows what the number says: what is left of the limit.
             accessory: ProgressRing {
                 size: 36
                 thickness: 4
-                value: dashboardVM.dailyLimit > 0 ? dashboardVM.dailyInterviewsCount / dashboardVM.dailyLimit : 0
+                value: dashboardVM.dailyLimit > 0 ? dashboardVM.remainingToday / dashboardVM.dailyLimit : 0
                 progressColor: Theme.blue400
             }
         }

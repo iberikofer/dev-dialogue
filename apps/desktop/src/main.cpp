@@ -78,6 +78,7 @@ int main(int argc, char *argv[]) {
     return client->isOnline();
   };
   dashboardVM->setBackendOnlineProbe(backendOnline);
+  setupVM->setBackendOnlineProbe(backendOnline);
   chatVM->setBackendOnlineProbe(backendOnline);
   reportVM->setBackendOnlineProbe(backendOnline);
   adminVM->setBackendOnlineProbe(backendOnline);

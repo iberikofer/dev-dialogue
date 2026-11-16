@@ -21,8 +21,27 @@ AppPage {
 
     readonly property bool ready: !reportVM.loading && reportVM.hasReport
 
+    // "Frontend · Junior · 16.11.2026  10:49": which interview this is.
+    function trackName(direction) {
+        switch (direction) {
+        case "frontend": return "Frontend"
+        case "backend": return "Backend"
+        case "devops": return "DevOps"
+        case "qa": return qsTr("Quality Assurance")
+        case "pm": return qsTr("Project Management")
+        default: return ""
+        }
+    }
+    readonly property string context: {
+        const parts = [trackName(reportVM.direction),
+                       reportVM.level.charAt(0).toUpperCase() + reportVM.level.slice(1),
+                       reportVM.dateText]
+        return parts.filter(part => part !== "").join("  ·  ")
+    }
+
     title: qsTr("Interview report")
-    subtitle: ready ? qsTr("How you did and what to study next.") : qsTr("Preparing the report…")
+    subtitle: ready ? (context !== "" ? context : qsTr("How you did and what to study next."))
+                    : qsTr("Preparing the report…")
     badgeText: ready && reportVM.isDemoData ? qsTr("Demo data") : ""
     scrollable: true
 
@@ -106,6 +125,7 @@ AppPage {
                 property color toneText
                 property var items: []
 
+                visible: items.length > 0
                 Layout.fillWidth: true
                 padding: 22
                 fillColor: Qt.tint(Theme.zinc950, Theme.alpha(tone, 0.06))

@@ -33,6 +33,7 @@ public:
 
     int count() const { return static_cast<int>(m_messages.size()); }
     int userMessageCount() const;
+    const std::vector<models::InterviewMessage>& messages() const { return m_messages; }
 
 private:
     std::vector<models::InterviewMessage> m_messages;

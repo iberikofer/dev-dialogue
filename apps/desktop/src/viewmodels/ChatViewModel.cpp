@@ -146,6 +146,7 @@ void ChatViewModel::completeInterview() {
     };
 
     if (m_offline || !m_interviewService) {
+        recordLocalInterview();
         finish();
         return;
     }
@@ -162,6 +163,7 @@ void ChatViewModel::resetSession(const QString& interviewId, const QString& dire
     m_language = language;
     m_offline = offline;
     m_completed = false;
+    m_startedAt = support::nowIso();
     emit sessionChanged();
 
     m_messages.clear();
@@ -191,11 +193,24 @@ void ChatViewModel::scheduleFallbackReply(int answersBefore) {
         if (token != m_sessionToken) {
             return;
         }
-        const QStringList replies = demo::chatReplies(m_language);
+        const QStringList replies = demo::chatReplies(m_direction, m_language);
         const qsizetype index = std::min<qsizetype>(answersBefore, replies.size() - 1);
         appendMessage(RoleAssistant, replies.at(index));
         setBusy(false);
     });
+}
+
+void ChatViewModel::recordLocalInterview() const {
+    models::InterviewDetail interview;
+    interview.id = m_interviewId.toStdString();
+    interview.direction = support::enumFromString<models::InterviewDirection>(m_direction);
+    interview.level = support::enumFromString<models::InterviewLevel>(m_level);
+    interview.language = support::enumFromString<models::InterviewLanguage>(m_language);
+    interview.status = models::InterviewStatus::Completed;
+    interview.createdAt = m_startedAt;
+    interview.updatedAt = support::nowIso();
+    interview.transcript = m_messages.messages();
+    demo::recordFinishedInterview(interview);
 }
 
 void ChatViewModel::setBusy(bool busy) {
