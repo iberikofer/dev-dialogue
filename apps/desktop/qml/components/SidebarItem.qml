@@ -23,9 +23,12 @@ AbstractButton {
     Keys.onReturnPressed: clicked()
     Keys.onEnterPressed: clicked()
 
-    ToolTip.visible: hovered && !expanded
-    ToolTip.delay: 300
-    ToolTip.text: shortcutHint !== "" ? text + "  ·  " + shortcutHint : text
+    AppToolTip {
+        side: "right"
+        delay: 300
+        visible: item.hovered && !item.expanded
+        text: item.shortcutHint !== "" ? item.text + "  ·  " + item.shortcutHint : item.text
+    }
 
     background: Item {
         // Glow under the active pill

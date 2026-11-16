@@ -179,6 +179,7 @@ qt_add_qml_module(DevDialogue
         qml/components/AlertBox.qml
         qml/components/AppPage.qml
         qml/components/AppText.qml
+        qml/components/AppToolTip.qml
         qml/components/Badge.qml
         qml/components/DarkCard.qml
         qml/components/DarkTextArea.qml

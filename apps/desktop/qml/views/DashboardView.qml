@@ -30,14 +30,16 @@ AppPage {
 
     actions: [
         TactileButton {
+            id: newInterviewButton
             text: qsTr("New interview")
             iconLeft: "circle-plus"
             implicitHeight: 40
             glow: true
             onClicked: navVM.navigateToSetup()
-            ToolTip.visible: hovered
-            ToolTip.delay: 600
-            ToolTip.text: "Ctrl+N"
+            AppToolTip {
+                visible: newInterviewButton.hovered
+                text: "Ctrl+N"
+            }
         }
     ]
 

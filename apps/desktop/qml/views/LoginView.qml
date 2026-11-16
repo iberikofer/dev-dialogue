@@ -4,8 +4,8 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import DevDialogue.App
 
-// Sign-in screen shown while nobody is signed in: the product on the left,
-// the email form and the demo access on the right.
+// Sign-in screen shown while nobody is signed in: a compact sign-in
+// window with the email form and the demo access.
 Item {
     id: view
 
@@ -90,128 +90,72 @@ Item {
         acceptedButtons: Qt.AllButtons
     }
 
-    RowLayout {
+    // A sign-in window, not a landing page: the app mark, one form and the
+    // demo access, centred in the window. Scrolls if the window is short.
+    Flickable {
+        id: scroller
         anchors.fill: parent
-        anchors.margins: Theme.windowGap
-        spacing: Theme.windowGap
+        contentWidth: width
+        contentHeight: Math.max(height, column.implicitHeight + 96)
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        ScrollBar.vertical: ThemedScrollBar {}
 
-        // ------------------------------------------------------ Product
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            radius: Theme.radiusXl
-            border.width: 1
-            border.color: Theme.borderGlass
-            clip: true
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: "#121a2b" }
-                GradientStop { position: 1.0; color: "#0b0d13" }
-            }
+        ColumnLayout {
+            id: column
+            width: 400
+            x: (scroller.width - width) / 2
+            y: Math.max(48, (scroller.contentHeight - implicitHeight) / 2)
+            spacing: 0
 
-            GlowBlob {
-                width: parent.width * 1.1
-                height: parent.height * 0.8
-                x: -parent.width * 0.2
-                y: -parent.height * 0.2
-                color: Theme.blue600
-                strength: 0.22
-            }
-
-            ColumnLayout {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: 56
-                spacing: 0
-
+            // -------------------------------------------------- App mark
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 12
                 Image {
-                    Layout.preferredWidth: 72
-                    Layout.preferredHeight: 72
+                    Layout.preferredWidth: 40
+                    Layout.preferredHeight: 40
                     source: Qt.resolvedUrl("../../resources/app/app-icon.svg")
-                    sourceSize.width: 144
-                    sourceSize.height: 144
+                    sourceSize.width: 80
+                    sourceSize.height: 80
                     smooth: true
                 }
                 AppText {
-                    Layout.topMargin: 28
-                    Layout.fillWidth: true
-                    text: qsTr("Practise technical interviews with an AI interviewer")
-                    font.pixelSize: Typography.xl4
-                    font.weight: Typography.extrabold
-                    font.letterSpacing: Typography.tracking(Typography.xl4, Typography.trackingTighter)
-                    lineHeight: Typography.leadingTight
-                    wrapMode: Text.WordWrap
-                }
-                AppText {
-                    Layout.topMargin: 16
-                    Layout.fillWidth: true
-                    Layout.maximumWidth: 520
-                    text: qsTr("Pick a track and a level, answer follow-up questions, and get a scorecard with what to study next.")
-                    color: Theme.zinc400
-                    font.pixelSize: Typography.base
-                    lineHeight: Typography.leadingRelaxed
-                    wrapMode: Text.WordWrap
-                }
-
-                Repeater {
-                    model: [
-                        { icon: "code-xml", text: qsTr("Frontend, Backend, DevOps, QA and PM tracks") },
-                        { icon: "bot", text: qsTr("Adaptive questions in Ukrainian or English") },
-                        { icon: "trophy", text: qsTr("Scorecard with per-question feedback") }
-                    ]
-                    RowLayout {
-                        id: point
-                        required property var modelData
-                        required property int index
-                        Layout.topMargin: index === 0 ? 32 : 14
-                        spacing: 12
-                        Rectangle {
-                            implicitWidth: 32
-                            implicitHeight: 32
-                            radius: Theme.radiusSm
-                            color: Theme.alpha(Theme.blue500, 0.12)
-                            border.width: 1
-                            border.color: Theme.alpha(Theme.blue500, 0.25)
-                            Icon { anchors.centerIn: parent; name: point.modelData.icon; size: 16; color: Theme.blue300 }
-                        }
-                        AppText {
-                            text: point.modelData.text
-                            color: Theme.zinc300
-                        }
-                    }
+                    text: "Dev Dialogue"
+                    font.pixelSize: Typography.xl
+                    font.weight: Typography.semibold
                 }
             }
-        }
+            AppText {
+                Layout.topMargin: 8
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("Technical interview practice with an AI interviewer")
+                color: Theme.zinc400
+                wrapMode: Text.WordWrap
+            }
 
-        // --------------------------------------------------------- Form
-        Rectangle {
-            Layout.preferredWidth: 460
-            Layout.fillHeight: true
-            radius: Theme.radiusXl
-            color: "#0e0e11"
-            border.width: 1
-            border.color: Theme.borderGlass
-
-            Flickable {
-                id: scroller
-                anchors.fill: parent
-                contentWidth: width
-                contentHeight: Math.max(height, form.implicitHeight + 96)
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ThemedScrollBar {}
+            // ------------------------------------------------------ Form
+            Rectangle {
+                Layout.topMargin: 28
+                Layout.fillWidth: true
+                implicitHeight: form.implicitHeight + 64
+                radius: Theme.radiusXl
+                color: "#0e0e11"
+                border.width: 1
+                border.color: Theme.borderGlass
 
                 ColumnLayout {
                     id: form
-                    width: scroller.width - 96
-                    x: 48
-                    y: Math.max(48, (scroller.contentHeight - implicitHeight) / 2)
+                    x: 32
+                    y: 32
+                    width: parent.width - 64
                     spacing: 0
 
                     AppText {
                         Layout.fillWidth: true
                         text: view.signUp ? qsTr("Create an account") : qsTr("Sign in")
-                        font.pixelSize: Typography.xl2
+                        font.pixelSize: Typography.xl
                         font.weight: Typography.bold
                     }
                     AppText {
@@ -224,7 +168,7 @@ Item {
                     }
 
                     SegmentedControl {
-                        Layout.topMargin: 24
+                        Layout.topMargin: 20
                         Layout.fillWidth: true
                         model: [
                             { value: "signin", label: qsTr("Sign in") },
@@ -301,54 +245,47 @@ Item {
                         Layout.topMargin: 24
                         Layout.fillWidth: true
                         text: view.signUp ? qsTr("Create account") : qsTr("Sign in")
-                        iconRight: "arrow-right"
-                        implicitHeight: 46
+                        implicitHeight: 44
                         busy: authVM.isBusy
                         enabled: !authVM.isBusy
-                        glow: true
                         onClicked: view.submit()
                     }
+                }
+            }
 
-                    // ------------------------------------------ Demo access
-                    RowLayout {
-                        Layout.topMargin: 32
-                        Layout.fillWidth: true
-                        spacing: 12
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.borderGlass }
-                        MonoText {
-                            text: qsTr("or try without an account")
-                            caps: true
-                            color: Theme.textMuted
-                            font.pixelSize: Typography.micro
-                        }
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.borderGlass }
-                    }
-                    RowLayout {
-                        Layout.topMargin: 16
-                        Layout.fillWidth: true
-                        spacing: 10
+            // ----------------------------------------------- Demo access
+            AppText {
+                Layout.topMargin: 24
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                text: qsTr("No account? Try the app with demo data:")
+                color: Theme.textMuted
+                font.pixelSize: Typography.xs
+            }
+            RowLayout {
+                Layout.topMargin: 10
+                Layout.fillWidth: true
+                spacing: 10
 
-                        TactileButton {
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            variant: "secondary"
-                            text: qsTr("Demo candidate")
-                            iconLeft: "user-check"
-                            fontSize: Typography.xs
-                            implicitHeight: 40
-                            onClicked: view.demoLogin("candidate")
-                        }
-                        TactileButton {
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            variant: "secondary"
-                            text: qsTr("Demo admin")
-                            iconLeft: "shield-check"
-                            fontSize: Typography.xs
-                            implicitHeight: 40
-                            onClicked: view.demoLogin("admin")
-                        }
-                    }
+                TactileButton {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    variant: "secondary"
+                    text: qsTr("Demo candidate")
+                    iconLeft: "user-check"
+                    fontSize: Typography.xs
+                    implicitHeight: 38
+                    onClicked: view.demoLogin("candidate")
+                }
+                TactileButton {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    variant: "secondary"
+                    text: qsTr("Demo admin")
+                    iconLeft: "shield-check"
+                    fontSize: Typography.xs
+                    implicitHeight: 38
+                    onClicked: view.demoLogin("admin")
                 }
             }
         }

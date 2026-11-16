@@ -283,12 +283,14 @@ AppPage {
                             width: page.columnWidth(4, table.width)
                             height: parent.height
                             ToggleSwitch {
+                                id: activeSwitch
                                 anchors.verticalCenter: parent.verticalCenter
                                 checked: row.isActive
                                 onToggled: adminVM.setQuestionActive(row.questionId, checked)
-                                ToolTip.visible: hovered
-                                ToolTip.delay: 600
-                                ToolTip.text: row.isActive ? qsTr("Used in interviews") : qsTr("Not used in interviews")
+                                AppToolTip {
+                                    visible: activeSwitch.hovered
+                                    text: row.isActive ? qsTr("Used in interviews") : qsTr("Not used in interviews")
+                                }
                             }
                         }
                         Item {
@@ -304,9 +306,11 @@ AppPage {
                                 opacity: rowHover.hovered || hovered ? 1 : 0.4
                                 onClicked: adminVM.deleteQuestion(row.questionId)
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                ToolTip.visible: hovered
-                                ToolTip.delay: 400
-                                ToolTip.text: qsTr("Delete question")
+                                AppToolTip {
+                                    delay: 400
+                                    visible: removeButton.hovered
+                                    text: qsTr("Delete question")
+                                }
                                 background: Rectangle {
                                     radius: Theme.radiusSm
                                     color: removeButton.hovered ? Theme.alpha(Theme.red500, 0.12) : "transparent"

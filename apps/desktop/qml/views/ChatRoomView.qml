@@ -36,6 +36,7 @@ AppPage {
 
     actions: [
         TactileButton {
+            id: finishButton
             variant: "success"
             text: chatVM.isCompleting ? qsTr("Generating report...") : qsTr("Finish & get report")
             iconLeft: chatVM.isCompleting ? "" : "circle-check-big"
@@ -43,11 +44,12 @@ AppPage {
             implicitHeight: 40
             enabled: !chatVM.isCompleting && !chatVM.isBusy && chatVM.candidateAnswersCount > 0
             opacity: enabled || chatVM.isCompleting ? 1.0 : 0.4
-            glow: enabled
             onClicked: chatVM.completeInterview()
-            ToolTip.visible: hovered && chatVM.candidateAnswersCount === 0
-            ToolTip.delay: 300
-            ToolTip.text: qsTr("Answer at least one question first")
+            AppToolTip {
+                delay: 300
+                visible: finishButton.hovered && chatVM.candidateAnswersCount === 0
+                text: qsTr("Answer at least one question first")
+            }
         }
     ]
 
@@ -184,6 +186,7 @@ AppPage {
         }
 
         TactileButton {
+            id: sendButton
             iconLeft: "send"
             implicitWidth: 40
             implicitHeight: 40
@@ -195,11 +198,11 @@ AppPage {
             anchors.bottomMargin: 14
             enabled: input.text.trim().length > 0 && !chatVM.isBusy && !chatVM.isCompleting
             opacity: enabled ? 1.0 : 0.3
-            glow: enabled
             onClicked: page.send()
-            ToolTip.visible: hovered
-            ToolTip.delay: 600
-            ToolTip.text: qsTr("Send (Enter)")
+            AppToolTip {
+                visible: sendButton.hovered
+                text: qsTr("Send (Enter)")
+            }
         }
     }
 }

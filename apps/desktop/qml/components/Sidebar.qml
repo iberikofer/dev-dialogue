@@ -94,7 +94,7 @@ Rectangle {
             spacing: 10
 
             Image {
-                Layout.leftMargin: sidebar.expanded ? 8 : (parent.width - width) / 2
+                Layout.leftMargin: sidebar.expanded ? 8 : (sidebar.width - 24 - width) / 2
                 Layout.preferredWidth: 30
                 Layout.preferredHeight: 30
                 source: Qt.resolvedUrl("../../resources/app/app-icon.svg")
@@ -176,11 +176,14 @@ Rectangle {
             enabled: !backendVM.isChecking
             onClicked: backendVM.checkHealth()
             HoverHandler { cursorShape: Qt.PointingHandCursor }
-            ToolTip.visible: hovered
-            ToolTip.delay: 300
-            ToolTip.text: backendVM.isOffline
-                ? qsTr("Server unreachable: showing demo data. Click to check again.")
-                : qsTr("Connected to the server. Click to check again.")
+            AppToolTip {
+                side: sidebar.expanded ? "top" : "right"
+                delay: 300
+                visible: status.hovered
+                text: backendVM.isOffline
+                    ? qsTr("Server unreachable: showing demo data. Click to check again.")
+                    : qsTr("Connected to the server. Click to check again.")
+            }
 
             background: Rectangle {
                 radius: height / 2
@@ -232,9 +235,12 @@ Rectangle {
             hoverEnabled: true
             onClicked: sidebar.expanded = !sidebar.expanded
             HoverHandler { cursorShape: Qt.PointingHandCursor }
-            ToolTip.visible: hovered
-            ToolTip.delay: 300
-            ToolTip.text: (sidebar.expanded ? qsTr("Collapse sidebar") : qsTr("Expand sidebar")) + "  ·  Ctrl+B"
+            AppToolTip {
+                side: sidebar.expanded ? "top" : "right"
+                delay: 300
+                visible: collapse.hovered
+                text: (sidebar.expanded ? qsTr("Collapse sidebar") : qsTr("Expand sidebar")) + "  ·  Ctrl+B"
+            }
 
             background: Rectangle {
                 radius: height / 2

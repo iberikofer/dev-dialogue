@@ -10,7 +10,7 @@ import DevDialogue.App
 //   primary   - solid blue call to action
 //   secondary - bordered dark button
 //   ghost     - text-only button with a hover wash
-//   success   - emerald > teal gradient ("Finish interview")
+//   success   - solid emerald ("Finish interview")
 //   rose      - solid rose (chat send button)
 //   soft      - tinted blue button that fills on hover ("Link")
 //   danger    - tinted red button ("Unlink")
@@ -168,31 +168,27 @@ Button {
             color: control.hovered && control.enabled ? control.colors.bgHover : control.colors.bg
             border.width: 1
             border.color: control.hovered && control.enabled ? control.colors.borderHover : control.colors.border
-            visible: !control.hasCustomGradient && control.variant !== "success"
+            visible: !control.hasCustomGradient
             Behavior on color { ColorAnimation { duration: Theme.durationFast } }
             Behavior on border.color { ColorAnimation { duration: Theme.durationFast } }
         }
 
-        // Gradient fills: the success variant and the spec's custom gradient.
+        // The spec's custom gradient fill.
         Rectangle {
             anchors.fill: parent
             radius: control.buttonRadius
-            visible: control.hasCustomGradient || control.variant === "success"
-            border.width: control.hasCustomGradient ? 1 : 0
+            visible: control.hasCustomGradient
+            border.width: 1
             border.color: Qt.rgba(1, 1, 1, 0.15)
             gradient: Gradient {
                 orientation: Gradient.Horizontal
                 GradientStop {
                     position: 0.0
-                    color: control.hasCustomGradient
-                        ? (control.down ? Qt.darker(control.bgGradientStart, 1.15) : control.bgGradientStart)
-                        : (control.hovered && control.enabled ? Theme.emerald500 : Theme.emerald600)
+                    color: control.down ? Qt.darker(control.bgGradientStart, 1.15) : control.bgGradientStart
                 }
                 GradientStop {
                     position: 1.0
-                    color: control.hasCustomGradient
-                        ? (control.down ? Qt.darker(control.bgGradientEnd, 1.15) : control.bgGradientEnd)
-                        : (control.hovered && control.enabled ? Theme.teal500 : Theme.teal600)
+                    color: control.down ? Qt.darker(control.bgGradientEnd, 1.15) : control.bgGradientEnd
                 }
             }
         }

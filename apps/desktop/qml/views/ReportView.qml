@@ -284,9 +284,10 @@ AppPage {
                             hoverEnabled: true
                             onClicked: Qt.openUrlExternally(resource.modelData.resource)
                             HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            ToolTip.visible: hovered
-                            ToolTip.delay: 600
-                            ToolTip.text: qsTr("Open in browser")
+                            AppToolTip {
+                                visible: resource.hovered
+                                text: qsTr("Open in browser")
+                            }
 
                             background: Rectangle {
                                 radius: Theme.radiusMd
