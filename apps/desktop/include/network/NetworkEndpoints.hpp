@@ -8,6 +8,11 @@ namespace api {
 inline const QString HealthPing = "/api/health/ping";
 inline const QString Health = "/health";
 inline const QString HealthDbMode = "/api/health/db-mode";
+inline const QString HealthDebugInfo = "/api/health/debug-info";
+inline const QString HealthLocalModel = "/api/health/local-model";
+inline const QString HealthLocalModelDownload = "/api/health/local-model/download";
+inline const QString HealthServicesEnsure = "/api/health/services/ensure";
+inline const QString HealthServicesRestart = "/api/health/services/restart";
 inline const QString AuthMe = "/api/auth/me";
 inline const QString Options = "/api/options";
 

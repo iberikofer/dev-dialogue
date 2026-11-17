@@ -55,11 +55,25 @@ void SetupViewModel::setLanguage(const QString& value) {
     }
 }
 
+void SetupViewModel::setLocalModelReadyProbe(std::function<bool()> probe) {
+    m_localModelReadyProbe = std::move(probe);
+}
+
 void SetupViewModel::start() {
     if (m_isBusy) {
         return;
     }
     setErrorMessage(QString());
+
+    if (m_ensureServicesProbe) {
+        m_ensureServicesProbe();
+    }
+
+    if (m_localModelReadyProbe && !m_localModelReadyProbe()) {
+        setErrorMessage(tr("Потрібно завантажити локальні моделі (gemma4:e4b та Parakeet STT), перш ніж починати співбесіду."));
+        emit localModelRequired();
+        return;
+    }
 
     // With the backend known to be down, start locally at once instead of
     // waiting for the request to time out.
@@ -88,7 +102,12 @@ void SetupViewModel::start() {
             }
             const models::ApiError& error = std::get<models::ApiError>(result);
             if (isRejectedByServer(error)) {
-                self->setErrorMessage(QString::fromStdString(error.message));
+                const QString msg = QString::fromStdString(error.message);
+                self->setErrorMessage(msg);
+                if (error.code == "LOCAL_MODEL_REQUIRED"
+                    || msg.contains(QStringLiteral("Local AI model"), Qt::CaseInsensitive)) {
+                    emit self->localModelRequired();
+                }
                 return;
             }
             self->launch(makeOfflineSessionId(), QString(), true);

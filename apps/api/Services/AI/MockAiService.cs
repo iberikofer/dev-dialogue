@@ -95,45 +95,33 @@ public class MockAiService : IAiService
     public async Task<string> GenerateFirstQuestionAsync(CreateInterviewDto dto, string? topicHint, CancellationToken cancellationToken = default)
     {
         var isUk = dto.Language.ToLowerInvariant() == "uk";
-        var dict = isUk ? UkrainianQuestions : EnglishQuestions;
-        var directionKey = dto.Direction.ToLowerInvariant();
-        var levelKey = dto.Level.ToLowerInvariant();
-
-        if (!dict.TryGetValue(directionKey, out var list) || list.Count == 0)
-        {
-            list = isUk ? UkrainianQuestions["backend"] : EnglishQuestions["backend"];
-        }
+        var selected = await QuestionBankSelector.PickNextQuestionAsync(
+            _scopeFactory,
+            dto.Direction,
+            dto.Level,
+            dto.Language,
+            topicHint,
+            Array.Empty<string>(),
+            0,
+            cancellationToken);
 
         var greeting = isUk
             ? $"Вітаю на технічній співбесіді на позицію {dto.Direction.ToUpperInvariant()} ({dto.Level})! Мене звати AI-інтерв'юер. Давайте почнемо з базових концепцій.\n\n"
             : $"Welcome to your technical interview for the {dto.Direction.ToUpperInvariant()} ({dto.Level}) position! I will be your interviewer today. Let's begin with our first question.\n\n";
 
-        var dbQuestion = await TryPickDatabaseQuestionAsync(directionKey, levelKey, topicHint, Array.Empty<string>(), cancellationToken);
-        var question = dbQuestion ?? list[0];
-        return greeting + question;
+        return greeting + selected.QuestionText;
     }
 
     public async Task<string> GenerateNextResponseAsync(Interview interview, List<InterviewMessageDto> transcript, CancellationToken cancellationToken = default)
     {
         var isUk = interview.Language.ToLowerInvariant() == "uk";
-        var dict = isUk ? UkrainianQuestions : EnglishQuestions;
-        var directionKey = interview.Direction.ToLowerInvariant();
-        var levelKey = interview.Level.ToLowerInvariant();
-
-        if (!dict.TryGetValue(directionKey, out var list) || list.Count == 0)
-        {
-            list = isUk ? UkrainianQuestions["backend"] : EnglishQuestions["backend"];
-        }
-
-        // Determine question index based on user message count
         var userMessagesCount = transcript.Count(m => m.Role == "user");
 
         if (userMessagesCount >= 5)
         {
-            var closing = isUk
+            return isUk
                 ? "Дякую! Ви відповіли на всі запитання цієї сесії співбесіди. Зараз ви можете натиснути кнопку 'Завершити співбесіду', щоб я підготував для вас детальний звіт та оцінку знань."
                 : "Thank you! You have answered all primary questions for this interview session. You can now click 'Complete Interview' to generate your comprehensive performance report and scoring.";
-            return closing;
         }
 
         var askedTexts = transcript
@@ -141,9 +129,15 @@ public class MockAiService : IAiService
             .Select(m => m.Content)
             .ToList();
 
-        var dbQuestion = await TryPickDatabaseQuestionAsync(directionKey, levelKey, null, askedTexts, cancellationToken);
-        var nextIndex = userMessagesCount % list.Count;
-        var question = dbQuestion ?? list[nextIndex];
+        var selected = await QuestionBankSelector.PickNextQuestionAsync(
+            _scopeFactory,
+            interview.Direction,
+            interview.Level,
+            interview.Language,
+            null,
+            askedTexts,
+            userMessagesCount,
+            cancellationToken);
 
         var followUpsUk = new[]
         {
@@ -162,62 +156,7 @@ public class MockAiService : IAiService
         var followUps = isUk ? followUpsUk : followUpsEn;
         var prefix = followUps[userMessagesCount % followUps.Length];
 
-        return prefix + question;
-    }
-
-    private async Task<string?> TryPickDatabaseQuestionAsync(
-        string direction,
-        string level,
-        string? topicHint,
-        IReadOnlyCollection<string> askedAssistantTexts,
-        CancellationToken cancellationToken)
-    {
-        if (_scopeFactory == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetService<AppDbContext>();
-            if (db == null)
-            {
-                return null;
-            }
-
-            var candidates = await db.QuestionsBank
-                .AsNoTracking()
-                .Where(q => q.IsActive && q.Direction == direction)
-                .OrderByDescending(q => q.Level == level)
-                .ThenBy(q => q.CreatedAt)
-                .ToListAsync(cancellationToken);
-
-            var unused = candidates
-                .Where(q => !string.IsNullOrWhiteSpace(q.QuestionText)
-                    && !askedAssistantTexts.Any(asked => asked.Contains(q.QuestionText, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-
-            if (unused.Count == 0)
-            {
-                return null;
-            }
-
-            if (!string.IsNullOrWhiteSpace(topicHint))
-            {
-                var topicMatch = unused.FirstOrDefault(q => string.Equals(q.Topic, topicHint, StringComparison.OrdinalIgnoreCase));
-                if (topicMatch != null)
-                {
-                    return topicMatch.QuestionText;
-                }
-            }
-
-            return unused[0].QuestionText;
-        }
-        catch
-        {
-            return null;
-        }
+        return prefix + selected.QuestionText;
     }
 
     public Task<InterviewFeedbackDto> GenerateFeedbackAsync(Interview interview, List<InterviewMessageDto> transcript, CancellationToken cancellationToken = default)

@@ -51,6 +51,8 @@ Item {
 
             ColumnLayout {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 120
+                clip: true
                 spacing: 4
 
                 RowLayout {
@@ -58,7 +60,7 @@ Item {
                     Layout.fillWidth: true
 
                     AppText {
-                        Layout.maximumWidth: header.width * 0.6
+                        Layout.maximumWidth: Math.max(120, header.width * 0.45)
                         text: page.title
                         font.pixelSize: Typography.xl2
                         font.weight: Typography.bold

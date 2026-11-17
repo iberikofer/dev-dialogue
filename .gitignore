@@ -43,6 +43,8 @@ appsettings.*.local.json
 # Databases & Local Data
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 .supabase/
@@ -78,6 +80,7 @@ yarn-error.log*
 .agents/
 AGENTS.md
 3D Face Import/
+apps/desktop/third_party/
 
 # OS / Misc
 *.local

@@ -43,20 +43,29 @@ void InterviewService::getInterview(
 void InterviewService::sendMessage(
     const QString& id,
     const QString& content,
-    network::ApiCallback<models::SendMessageResponse> callback
+    network::ApiCallback<models::SendMessageResponse> callback,
+    const QString& action,
+    const std::optional<models::VisualContext>& visualContext
 ) {
-    models::SendMessageRequest req{content.toStdString()};
+    models::SendMessageRequest req{content.toStdString(), std::nullopt, visualContext};
+    if (!action.isEmpty()) {
+        req.action = action.toStdString();
+    }
     m_apiClient->post<models::SendMessageRequest, models::SendMessageResponse>(
         endpoints::api::interviewMessage(id), req, callback);
 }
 
 void InterviewService::completeInterview(
     const QString& id,
-    network::ApiCallback<models::CompleteInterviewResponse> callback
+    network::ApiCallback<models::CompleteInterviewResponse> callback,
+    const std::optional<models::VisualAssessment>& visualAssessment
 ) {
-    nlohmann::json emptyBody = nlohmann::json::object();
+    nlohmann::json body = nlohmann::json::object();
+    if (visualAssessment.has_value()) {
+        body["visual_assessment"] = *visualAssessment;
+    }
     m_apiClient->post<nlohmann::json, models::CompleteInterviewResponse>(
-        endpoints::api::interviewComplete(id), emptyBody, callback);
+        endpoints::api::interviewComplete(id), body, callback);
 }
 
 void InterviewService::getStats(

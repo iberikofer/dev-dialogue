@@ -7,17 +7,20 @@
 ;   ISCC /DPayloadUrl="..." /DPayloadSha256="..." /DPayloadSize=... installer\dev-dialogue-bootstrap.iss
 ;
 ; Overridable defaults (edit or pass via ISCC):
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
 #ifndef PayloadUrl
-  #define PayloadUrl "https://github.com/iberikofer/dev-dialogue/releases/download/v1.0.0/DevDialogue-Setup-1.0.0-x64.exe"
+  #define PayloadUrl "https://github.com/iberikofer/dev-dialogue/releases/download/latest/DevDialogue-Setup-x64.exe"
 #endif
 #ifndef PayloadSha256
   #define PayloadSha256 ""
 #endif
 #ifndef PayloadSize
-  #define PayloadSize "30000000"
+  #define PayloadSize "120000000"
 #endif
 #ifndef PayloadFile
-  #define PayloadFile "DevDialogue-Setup-1.0.0-x64.exe"
+  #define PayloadFile "DevDialogue-Setup-x64.exe"
 #endif
 #ifndef PayloadArgs
   #define PayloadArgs ""
@@ -26,7 +29,7 @@
 [Setup]
 AppId={{2B0B1F3C-9A41-4E7B-9C6E-5D1A7F2E4B80}
 AppName=Dev Dialogue
-AppVersion=1.0.0
+AppVersion={#AppVersion}
 AppPublisher=VNTU
 DefaultDirName={tmp}\DevDialogueBootstrap
 DisableDirPage=yes
@@ -34,7 +37,7 @@ DisableProgramGroupPage=yes
 DisableFinishedPage=yes
 Uninstallable=no
 OutputDir=..\dist
-OutputBaseFilename=DevDialogue-Bootstrap-1.0.0-x64
+OutputBaseFilename=DevDialogue-Bootstrap-{#AppVersion}-x64
 SetupIconFile=..\apps\desktop\resources\app\app-icon.ico
 Compression=lzma2
 SolidCompression=yes

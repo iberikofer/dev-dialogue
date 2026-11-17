@@ -12,8 +12,10 @@
 [CmdletBinding()]
 param(
     [string] $Configuration = 'Release',
+    [string] $AppVersion = '1.0.0',
+    [string] $ReleaseTag = 'latest',
     # Where the bootstrapper fetches the full installer from. Defaults to the
-    # GitHub release of the current version.
+    # GitHub release of the main branch ('latest').
     [string] $PayloadUrl = ''
 )
 
@@ -122,6 +124,25 @@ if ($objdump) {
     } while ($added)
 }
 
+# 5b. Stage the local .NET API backend (api\DevDialogue.Api.exe) and 3D Avatar assets.
+$apiProj = Join-Path $root 'apps\api\DevDialogue.Api.csproj'
+if (Test-Path $apiProj) {
+    Write-Host '== Publishing API Backend =='
+    $apiStage = Join-Path $stageDir 'api'
+    dotnet publish $apiProj -c $Configuration -o $apiStage --nologo
+    if ($LASTEXITCODE -ne 0) { throw 'API publish failed.' }
+}
+
+$avatarSrc = Join-Path $root '3D Face Import'
+if (Test-Path $avatarSrc) {
+    Write-Host '== Staging 3D Avatar assets =='
+    $avatarDst = Join-Path $stageDir '3D Face Import'
+    New-Item -ItemType Directory -Path $avatarDst -Force | Out-Null
+    Get-ChildItem $avatarSrc -Force | Where-Object {
+        $_.Name -notin @('.venv', 'scratch', '__pycache__', '.git')
+    } | Copy-Item -Destination $avatarDst -Recurse -Force
+}
+
 # 6. Compile the installer.
 $iscc = Find-Tool 'ISCC' @(
     (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
@@ -133,26 +154,44 @@ if (-not $iscc) {
 }
 
 Write-Host '== Building installer =='
-& $iscc $issFile
+& $iscc "/DAppVersion=$AppVersion" $issFile
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
 
 # 7. Bootstrapper: a small installer that downloads the installer above.
 $bootstrapIss = Join-Path $root 'installer\dev-dialogue-bootstrap.iss'
-$payload = Get-ChildItem (Join-Path $root 'dist') -Filter 'DevDialogue-Setup-*.exe' |
+$payload = Get-ChildItem (Join-Path $root 'dist') -Filter "DevDialogue-Setup-$AppVersion-x64.exe" |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $payload) {
+    $payload = Get-ChildItem (Join-Path $root 'dist') -Filter 'DevDialogue-Setup-*.exe' |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
 if (-not $payload) { throw 'Installer was not produced.' }
 $payloadHash = (Get-FileHash $payload.FullName -Algorithm SHA256).Hash.ToLower()
+
+$stableCopy = Join-Path $root 'dist\DevDialogue-Setup-x64.exe'
+Copy-Item $payload.FullName $stableCopy -Force
 
 if (-not $PayloadUrl) {
     $remote = (& git -C $root remote get-url origin) -join ''
     $slug = ($remote -replace '^.*github\.com[:/]', '') -replace '\.git$', ''
-    $version = ([regex]::Match((Get-Content $issFile -Raw), '#define AppVersion "([^"]+)"')).Groups[1].Value
-    $PayloadUrl = "https://github.com/$slug/releases/download/v$version/$($payload.Name)"
+    $PayloadUrl = "https://github.com/$slug/releases/download/$ReleaseTag/DevDialogue-Setup-x64.exe"
 }
 
 Write-Host '== Building bootstrapper =='
-& $iscc "/DPayloadUrl=$PayloadUrl" "/DPayloadSha256=$payloadHash" "/DPayloadSize=$($payload.Length)" $bootstrapIss
+& $iscc "/DAppVersion=$AppVersion" "/DPayloadUrl=$PayloadUrl" "/DPayloadSha256=$payloadHash" "/DPayloadSize=$($payload.Length)" $bootstrapIss
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup (bootstrapper) failed.' }
+
+$commitSha = ((& git -C $root rev-parse --short HEAD) -join '').Trim()
+$manifest = @{
+    version = $AppVersion
+    commit = $commitSha
+    installerUrl = $PayloadUrl
+    sha256 = $payloadHash
+    size = $payload.Length
+    publishedAt = (Get-Date).ToUniversalTime().ToString('o')
+} | ConvertTo-Json -Depth 3
+$manifestPath = Join-Path $root 'dist\latest.json'
+Set-Content -Path $manifestPath -Value $manifest -Encoding UTF8
 
 # 8. Report.
 $bootstrap = Get-ChildItem (Join-Path $root 'dist') -Filter 'DevDialogue-Bootstrap-*.exe' |

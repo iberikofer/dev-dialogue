@@ -131,6 +131,7 @@ public static class SqliteMirrorExtensions
 
         await using var sqliteDb = new AppDbContext(options);
         await sqliteDb.Database.EnsureCreatedAsync(cancellationToken);
+        await EnsureSqliteSchemaUpgradedAsync(sqliteDb, cancellationToken);
 
         var isAlreadySqlite = sourceDb.Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) == true;
         if (!isAlreadySqlite)
@@ -241,7 +242,90 @@ public static class SqliteMirrorExtensions
         app.MapGet("/db", () => Results.Content(DbSwitchPageHtml, "text/html; charset=utf-8"))
             .ExcludeFromDescription();
 
+        app.MapGet("/api/health/debug-info", async (
+            AppDbContext db,
+            DatabaseModeState modeState,
+            IConfiguration config,
+            CancellationToken ct) =>
+        {
+            var canConnect = await db.Database.CanConnectAsync(ct);
+            var pool = await db.QuestionsBank
+                .AsNoTracking()
+                .OrderBy(q => q.Direction)
+                .ThenBy(q => q.CreatedAt)
+                .Select(q => new
+                {
+                    q.Direction,
+                    q.Level,
+                    q.Topic,
+                    q.QuestionText,
+                    hasExpectedAnswer = !string.IsNullOrWhiteSpace(q.ExpectedAnswer)
+                })
+                .ToListAsync(ct);
+
+            return Results.Ok(new
+            {
+                database = new
+                {
+                    mode = modeState.ActiveMode,
+                    useSqlite = modeState.UseSqlite,
+                    encrypted = modeState.UseSqlite,
+                    cipher = modeState.UseSqlite ? "SQLCipher (AES-256)" : null,
+                    provider = db.Database.ProviderName,
+                    canConnect,
+                    sqliteFile = modeState.SqliteFilePath,
+                    counts = new
+                    {
+                        users = await db.Users.CountAsync(ct),
+                        interviews = await db.Interviews.CountAsync(ct),
+                        questions_bank = pool.Count
+                    }
+                },
+                ai = new
+                {
+                    provider = config["AI:Provider"] ?? "Mock",
+                    model = config["AI:OllamaModel"] ?? "gemma4:e4b",
+                    ollamaUrl = config["AI:OllamaUrl"] ?? "http://127.0.0.1:11434"
+                },
+                questionsPool = pool,
+                recentTrace = DevDialogue.Api.Services.AI.DebugTraceLog.Snapshot(),
+                timestamp = DateTime.UtcNow
+            });
+        })
+        .WithTags("Health");
+
         return app;
+    }
+
+    public static async Task EnsureSqliteSchemaUpgradedAsync(AppDbContext sqliteDb, CancellationToken cancellationToken = default)
+    {
+        var conn = sqliteDb.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open)
+        {
+            await conn.OpenAsync(cancellationToken);
+        }
+
+        var hasExpectedAnswer = false;
+        await using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA table_info('questions_bank');";
+            await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (string.Equals(reader["name"]?.ToString(), "expected_answer", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasExpectedAnswer = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasExpectedAnswer)
+        {
+            await using var alter = conn.CreateCommand();
+            alter.CommandText = "ALTER TABLE \"questions_bank\" ADD COLUMN \"expected_answer\" TEXT NULL;";
+            await alter.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 
     private static string GetOrCreateEncryptionKey(IConfiguration configuration, string contentRootPath)

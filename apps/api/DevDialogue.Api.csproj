@@ -21,6 +21,7 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.10" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.1" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.13.0" />
   </ItemGroup>
 
 </Project>

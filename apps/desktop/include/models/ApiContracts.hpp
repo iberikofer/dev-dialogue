@@ -90,11 +90,44 @@ struct QuestionScoreItem {
     std::string question;
     int score{0};
     std::string comment;
+    int responseSeconds{0};
+    std::string userAnswer;
+    std::unordered_map<std::string, int> criteria;
 };
 
 struct RecommendationItem {
     std::string topic;
     std::string resource;
+};
+
+struct VisualAssessment {
+    int overallScore{0};
+    int presenceScore{0};
+    int handsScore{0};
+    int lightingScore{0};
+    int appearanceScore{0};
+    int postureScore{0};
+    int emotionScore{75};
+    std::string dominantEmotion{"neutral"};
+    bool includedInScore{true};
+    std::string summary;
+    std::string model;
+    int samplesAnalyzed{0};
+};
+
+struct VisualContext {
+    bool cameraActive{false};
+    bool includeInScore{true};
+    bool personPresent{true};
+    int visualScore{0};
+    int presenceScore{0};
+    int handsScore{0};
+    int lightingScore{0};
+    int appearanceScore{0};
+    int postureScore{0};
+    int emotionScore{75};
+    std::string emotion{"neutral"};
+    std::string summary;
 };
 
 struct InterviewFeedbackReport {
@@ -104,6 +137,10 @@ struct InterviewFeedbackReport {
     std::vector<std::string> weaknesses;
     std::vector<RecommendationItem> recommendations;
     std::vector<QuestionScoreItem> questionScores;
+    int averageResponseSeconds{0};
+    int totalDurationSeconds{0};
+    std::string timingAnalysis;
+    std::optional<VisualAssessment> visualAssessment;
 };
 
 struct InterviewSummary {
@@ -131,19 +168,35 @@ struct CreateInterviewRequest {
     InterviewLanguage language{InterviewLanguage::Uk};
 };
 
+struct AvatarUiCommand {
+    std::string action;
+    std::string target;
+};
+
 struct CreateInterviewResponse {
     std::string interviewId;
     std::string firstQuestion;
+    std::string emotion{"smile"};
+    std::vector<std::string> actionsSequence;
+    std::vector<AvatarUiCommand> uiCommands;
 };
 
 struct SendMessageRequest {
     std::string content;
+    std::optional<std::string> action;
+    std::optional<VisualContext> visualContext;
 };
 
 struct SendMessageResponse {
     std::string message;
     int questionCount{0};
     std::optional<bool> isCompleted;
+    bool awaitingNextAction{false};
+    std::optional<int> lastScore;
+    std::vector<std::string> suggestedActions;
+    std::string emotion{"neutral"};
+    std::vector<std::string> actionsSequence;
+    std::vector<AvatarUiCommand> uiCommands;
 };
 
 struct CompleteInterviewResponse {
@@ -533,14 +586,22 @@ inline void to_json(nlohmann::json& j, const QuestionScoreItem& q) {
     j = nlohmann::json{
         {"question", q.question},
         {"score", q.score},
-        {"comment", q.comment}
+        {"comment", q.comment},
+        {"responseSeconds", q.responseSeconds},
+        {"userAnswer", q.userAnswer},
+        {"criteria", q.criteria}
     };
 }
 
 inline void from_json(const nlohmann::json& j, QuestionScoreItem& q) {
-    if (j.contains("question")) j.at("question").get_to(q.question);
-    if (j.contains("score")) j.at("score").get_to(q.score);
-    if (j.contains("comment")) j.at("comment").get_to(q.comment);
+    if (j.contains("question") && j["question"].is_string()) j.at("question").get_to(q.question);
+    if (j.contains("score") && j["score"].is_number()) j.at("score").get_to(q.score);
+    if (j.contains("comment") && j["comment"].is_string()) j.at("comment").get_to(q.comment);
+    if (j.contains("responseSeconds") && j["responseSeconds"].is_number()) j.at("responseSeconds").get_to(q.responseSeconds);
+    else if (j.contains("response_seconds") && j["response_seconds"].is_number()) j.at("response_seconds").get_to(q.responseSeconds);
+    if (j.contains("userAnswer") && j["userAnswer"].is_string()) j.at("userAnswer").get_to(q.userAnswer);
+    else if (j.contains("user_answer") && j["user_answer"].is_string()) j.at("user_answer").get_to(q.userAnswer);
+    if (j.contains("criteria") && j["criteria"].is_object()) j.at("criteria").get_to(q.criteria);
 }
 
 inline void to_json(nlohmann::json& j, const RecommendationItem& r) {
@@ -555,6 +616,79 @@ inline void from_json(const nlohmann::json& j, RecommendationItem& r) {
     if (j.contains("resource")) j.at("resource").get_to(r.resource);
 }
 
+inline void to_json(nlohmann::json& j, const VisualAssessment& v) {
+    j = nlohmann::json{
+        {"overall_score", v.overallScore},
+        {"presence_score", v.presenceScore},
+        {"hands_score", v.handsScore},
+        {"lighting_score", v.lightingScore},
+        {"appearance_score", v.appearanceScore},
+        {"posture_score", v.postureScore},
+        {"emotion_score", v.emotionScore},
+        {"dominant_emotion", v.dominantEmotion},
+        {"included_in_score", v.includedInScore},
+        {"summary", v.summary},
+        {"model", v.model},
+        {"samples_analyzed", v.samplesAnalyzed}
+    };
+}
+
+inline void from_json(const nlohmann::json& j, VisualAssessment& v) {
+    auto readInt = [&](const char* snake, const char* camel, int& target) {
+        if (j.contains(snake) && j[snake].is_number()) j.at(snake).get_to(target);
+        else if (j.contains(camel) && j[camel].is_number()) j.at(camel).get_to(target);
+    };
+    readInt("overall_score", "overallScore", v.overallScore);
+    readInt("presence_score", "presenceScore", v.presenceScore);
+    readInt("hands_score", "handsScore", v.handsScore);
+    readInt("lighting_score", "lightingScore", v.lightingScore);
+    readInt("appearance_score", "appearanceScore", v.appearanceScore);
+    readInt("posture_score", "postureScore", v.postureScore);
+    readInt("emotion_score", "emotionScore", v.emotionScore);
+    readInt("samples_analyzed", "samplesAnalyzed", v.samplesAnalyzed);
+    if (j.contains("dominant_emotion") && j["dominant_emotion"].is_string()) j.at("dominant_emotion").get_to(v.dominantEmotion);
+    else if (j.contains("dominantEmotion") && j["dominantEmotion"].is_string()) j.at("dominantEmotion").get_to(v.dominantEmotion);
+    if (j.contains("included_in_score") && j["included_in_score"].is_boolean()) j.at("included_in_score").get_to(v.includedInScore);
+    else if (j.contains("includedInScore") && j["includedInScore"].is_boolean()) j.at("includedInScore").get_to(v.includedInScore);
+    if (j.contains("summary") && j["summary"].is_string()) j.at("summary").get_to(v.summary);
+    if (j.contains("model") && j["model"].is_string()) j.at("model").get_to(v.model);
+}
+
+inline void to_json(nlohmann::json& j, const VisualContext& c) {
+    j = nlohmann::json{
+        {"camera_active", c.cameraActive},
+        {"include_in_score", c.includeInScore},
+        {"person_present", c.personPresent},
+        {"visual_score", c.visualScore},
+        {"presence_score", c.presenceScore},
+        {"hands_score", c.handsScore},
+        {"lighting_score", c.lightingScore},
+        {"appearance_score", c.appearanceScore},
+        {"posture_score", c.postureScore},
+        {"emotion_score", c.emotionScore},
+        {"emotion", c.emotion},
+        {"summary", c.summary}
+    };
+}
+
+inline void from_json(const nlohmann::json& j, VisualContext& c) {
+    if (j.contains("camera_active") && j["camera_active"].is_boolean()) j.at("camera_active").get_to(c.cameraActive);
+    else if (j.contains("cameraActive") && j["cameraActive"].is_boolean()) j.at("cameraActive").get_to(c.cameraActive);
+    if (j.contains("include_in_score") && j["include_in_score"].is_boolean()) j.at("include_in_score").get_to(c.includeInScore);
+    else if (j.contains("includeInScore") && j["includeInScore"].is_boolean()) j.at("includeInScore").get_to(c.includeInScore);
+    if (j.contains("person_present") && j["person_present"].is_boolean()) j.at("person_present").get_to(c.personPresent);
+    else if (j.contains("personPresent") && j["personPresent"].is_boolean()) j.at("personPresent").get_to(c.personPresent);
+    if (j.contains("visual_score") && j["visual_score"].is_number()) j.at("visual_score").get_to(c.visualScore);
+    if (j.contains("presence_score") && j["presence_score"].is_number()) j.at("presence_score").get_to(c.presenceScore);
+    if (j.contains("hands_score") && j["hands_score"].is_number()) j.at("hands_score").get_to(c.handsScore);
+    if (j.contains("lighting_score") && j["lighting_score"].is_number()) j.at("lighting_score").get_to(c.lightingScore);
+    if (j.contains("appearance_score") && j["appearance_score"].is_number()) j.at("appearance_score").get_to(c.appearanceScore);
+    if (j.contains("posture_score") && j["posture_score"].is_number()) j.at("posture_score").get_to(c.postureScore);
+    if (j.contains("emotion_score") && j["emotion_score"].is_number()) j.at("emotion_score").get_to(c.emotionScore);
+    if (j.contains("emotion") && j["emotion"].is_string()) j.at("emotion").get_to(c.emotion);
+    if (j.contains("summary") && j["summary"].is_string()) j.at("summary").get_to(c.summary);
+}
+
 inline void to_json(nlohmann::json& j, const InterviewFeedbackReport& r) {
     j = nlohmann::json{
         {"summary", r.summary},
@@ -562,8 +696,14 @@ inline void to_json(nlohmann::json& j, const InterviewFeedbackReport& r) {
         {"strengths", r.strengths},
         {"weaknesses", r.weaknesses},
         {"recommendations", r.recommendations},
-        {"questionScores", r.questionScores}
+        {"questionScores", r.questionScores},
+        {"averageResponseSeconds", r.averageResponseSeconds},
+        {"totalDurationSeconds", r.totalDurationSeconds},
+        {"timingAnalysis", r.timingAnalysis}
     };
+    if (r.visualAssessment.has_value()) {
+        j["visual_assessment"] = *r.visualAssessment;
+    }
 }
 
 inline void from_json(const nlohmann::json& j, InterviewFeedbackReport& r) {
@@ -572,6 +712,18 @@ inline void from_json(const nlohmann::json& j, InterviewFeedbackReport& r) {
     if (j.contains("strengths") && j["strengths"].is_array()) j.at("strengths").get_to(r.strengths);
     if (j.contains("weaknesses") && j["weaknesses"].is_array()) j.at("weaknesses").get_to(r.weaknesses);
     if (j.contains("recommendations") && j["recommendations"].is_array()) j.at("recommendations").get_to(r.recommendations);
+    if (j.contains("averageResponseSeconds") && j["averageResponseSeconds"].is_number()) j.at("averageResponseSeconds").get_to(r.averageResponseSeconds);
+    else if (j.contains("average_response_seconds") && j["average_response_seconds"].is_number()) j.at("average_response_seconds").get_to(r.averageResponseSeconds);
+    if (j.contains("totalDurationSeconds") && j["totalDurationSeconds"].is_number()) j.at("totalDurationSeconds").get_to(r.totalDurationSeconds);
+    else if (j.contains("total_duration_seconds") && j["total_duration_seconds"].is_number()) j.at("total_duration_seconds").get_to(r.totalDurationSeconds);
+    if (j.contains("timingAnalysis") && j["timingAnalysis"].is_string()) j.at("timingAnalysis").get_to(r.timingAnalysis);
+    else if (j.contains("timing_analysis") && j["timing_analysis"].is_string()) j.at("timing_analysis").get_to(r.timingAnalysis);
+
+    if (j.contains("visual_assessment") && j["visual_assessment"].is_object()) {
+        r.visualAssessment = j.at("visual_assessment").get<VisualAssessment>();
+    } else if (j.contains("visualAssessment") && j["visualAssessment"].is_object()) {
+        r.visualAssessment = j.at("visualAssessment").get<VisualAssessment>();
+    }
 
     // Support both camelCase ("questionScores") and ASP.NET Core snake_case ("question_scores")
     if (j.contains("questionScores") && j["questionScores"].is_array()) {
@@ -637,31 +789,61 @@ inline void from_json(const nlohmann::json& j, CreateInterviewRequest& r) {
     if (j.contains("language")) j.at("language").get_to(r.language);
 }
 
+inline void to_json(nlohmann::json& j, const AvatarUiCommand& c) {
+    j = nlohmann::json{{"action", c.action}, {"target", c.target}};
+}
+
+inline void from_json(const nlohmann::json& j, AvatarUiCommand& c) {
+    if (j.contains("action") && j.at("action").is_string()) j.at("action").get_to(c.action);
+    if (j.contains("target") && j.at("target").is_string()) j.at("target").get_to(c.target);
+}
+
 inline void to_json(nlohmann::json& j, const CreateInterviewResponse& r) {
     j = nlohmann::json{
         {"interviewId", r.interviewId},
-        {"firstQuestion", r.firstQuestion}
+        {"firstQuestion", r.firstQuestion},
+        {"emotion", r.emotion},
+        {"actionsSequence", r.actionsSequence},
+        {"uiCommands", r.uiCommands}
     };
 }
 
 inline void from_json(const nlohmann::json& j, CreateInterviewResponse& r) {
     if (j.contains("interviewId")) j.at("interviewId").get_to(r.interviewId);
     if (j.contains("firstQuestion")) j.at("firstQuestion").get_to(r.firstQuestion);
+    if (j.contains("emotion") && j.at("emotion").is_string()) j.at("emotion").get_to(r.emotion);
+    if (j.contains("actionsSequence") && j.at("actionsSequence").is_array()) j.at("actionsSequence").get_to(r.actionsSequence);
+    if (j.contains("uiCommands") && j.at("uiCommands").is_array()) j.at("uiCommands").get_to(r.uiCommands);
 }
 
 inline void to_json(nlohmann::json& j, const SendMessageRequest& r) {
     j = nlohmann::json{{"content", r.content}};
+    if (r.action.has_value() && !r.action->empty()) {
+        j["action"] = *r.action;
+    }
+    if (r.visualContext.has_value()) {
+        j["visual_context"] = *r.visualContext;
+    }
 }
 
 inline void from_json(const nlohmann::json& j, SendMessageRequest& r) {
     if (j.contains("content")) j.at("content").get_to(r.content);
+    if (j.contains("action") && !j.at("action").is_null()) r.action = j.at("action").get<std::string>();
+    if (j.contains("visual_context") && j.at("visual_context").is_object()) r.visualContext = j.at("visual_context").get<VisualContext>();
+    else if (j.contains("visualContext") && j.at("visualContext").is_object()) r.visualContext = j.at("visualContext").get<VisualContext>();
 }
 
 inline void to_json(nlohmann::json& j, const SendMessageResponse& r) {
     j = nlohmann::json{
         {"message", r.message},
         {"questionCount", r.questionCount},
-        {"isCompleted", r.isCompleted}
+        {"isCompleted", r.isCompleted},
+        {"awaitingNextAction", r.awaitingNextAction},
+        {"lastScore", r.lastScore},
+        {"suggestedActions", r.suggestedActions},
+        {"emotion", r.emotion},
+        {"actionsSequence", r.actionsSequence},
+        {"uiCommands", r.uiCommands}
     };
 }
 
@@ -669,6 +851,12 @@ inline void from_json(const nlohmann::json& j, SendMessageResponse& r) {
     if (j.contains("message")) j.at("message").get_to(r.message);
     if (j.contains("questionCount")) j.at("questionCount").get_to(r.questionCount);
     if (j.contains("isCompleted")) j.at("isCompleted").get_to(r.isCompleted);
+    if (j.contains("awaitingNextAction") && !j.at("awaitingNextAction").is_null()) j.at("awaitingNextAction").get_to(r.awaitingNextAction);
+    if (j.contains("lastScore") && !j.at("lastScore").is_null()) r.lastScore = j.at("lastScore").get<int>();
+    if (j.contains("suggestedActions") && j.at("suggestedActions").is_array()) j.at("suggestedActions").get_to(r.suggestedActions);
+    if (j.contains("emotion") && j.at("emotion").is_string()) j.at("emotion").get_to(r.emotion);
+    if (j.contains("actionsSequence") && j.at("actionsSequence").is_array()) j.at("actionsSequence").get_to(r.actionsSequence);
+    if (j.contains("uiCommands") && j.at("uiCommands").is_array()) j.at("uiCommands").get_to(r.uiCommands);
 }
 
 inline void to_json(nlohmann::json& j, const CompleteInterviewResponse& r) {
