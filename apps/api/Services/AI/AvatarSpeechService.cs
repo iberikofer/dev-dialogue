@@ -450,15 +450,24 @@ if __name__ == "__main__":
 
     private static string? ResolveAvatarRoot()
     {
-        var roots = new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory };
+        var roots = new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() };
+        var relativeCandidates = new[]
+        {
+            "AvatarAssets",
+            Path.Combine("apps", "api", "AvatarAssets"),
+            "3D Face Import"
+        };
         foreach (var start in roots)
         {
             var dir = new DirectoryInfo(start);
             for (var i = 0; i < 7 && dir is not null; i++)
             {
-                var candidate = Path.Combine(dir.FullName, "3D Face Import");
-                if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "model.html")))
-                    return candidate;
+                foreach (var rel in relativeCandidates)
+                {
+                    var candidate = Path.Combine(dir.FullName, rel);
+                    if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "model.html")))
+                        return candidate;
+                }
                 dir = dir.Parent;
             }
         }
