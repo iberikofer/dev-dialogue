@@ -37,6 +37,18 @@ function Find-Tool {
     return $null
 }
 
+# 0. Ensure WebView2 SDK is present (ignored from git via apps/desktop/third_party/).
+$webview2Dir = Join-Path $root 'apps\desktop\third_party\webview2'
+$webview2Header = Join-Path $webview2Dir 'build\native\include\WebView2.h'
+if (-not (Test-Path $webview2Header)) {
+    Write-Host '== Downloading Microsoft.Web.WebView2 NuGet package =='
+    New-Item -ItemType Directory -Path $webview2Dir -Force | Out-Null
+    $nupkgZip = Join-Path $env:TEMP 'Microsoft.Web.WebView2.zip'
+    Invoke-WebRequest -Uri 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2' -OutFile $nupkgZip -UseBasicParsing
+    Expand-Archive -Path $nupkgZip -DestinationPath $webview2Dir -Force
+    Remove-Item $nupkgZip -Force -ErrorAction SilentlyContinue
+}
+
 # 1. Configure (only when there is no build folder yet).
 if (-not (Test-Path (Join-Path $buildDir 'CMakeCache.txt'))) {
     Write-Host '== Configuring (CMake) =='
@@ -73,6 +85,10 @@ Write-Host '== Staging runtime =='
 if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
 New-Item -ItemType Directory -Path $stageDir | Out-Null
 Copy-Item $exe (Join-Path $stageDir $exeName) -Force
+$webview2Loader = Join-Path $root 'apps\desktop\third_party\webview2\build\native\x64\WebView2Loader.dll'
+if (Test-Path $webview2Loader) {
+    Copy-Item $webview2Loader (Join-Path $stageDir 'WebView2Loader.dll') -Force
+}
 & $deploy --qmldir (Join-Path $root 'apps\desktop\qml') --no-translations (Join-Path $stageDir $exeName)
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
 
@@ -124,23 +140,13 @@ if ($objdump) {
     } while ($added)
 }
 
-# 5b. Stage the local .NET API backend (api\DevDialogue.Api.exe) and 3D Avatar assets.
+# 5b. Stage the local .NET API backend (api\DevDialogue.Api.exe + api\AvatarAssets).
 $apiProj = Join-Path $root 'apps\api\DevDialogue.Api.csproj'
 if (Test-Path $apiProj) {
     Write-Host '== Publishing API Backend =='
     $apiStage = Join-Path $stageDir 'api'
-    dotnet publish $apiProj -c $Configuration -o $apiStage --nologo
+    dotnet publish $apiProj -c $Configuration -r win-x64 --self-contained true -o $apiStage --nologo
     if ($LASTEXITCODE -ne 0) { throw 'API publish failed.' }
-}
-
-$avatarSrc = Join-Path $root '3D Face Import'
-if (Test-Path $avatarSrc) {
-    Write-Host '== Staging 3D Avatar assets =='
-    $avatarDst = Join-Path $stageDir '3D Face Import'
-    New-Item -ItemType Directory -Path $avatarDst -Force | Out-Null
-    Get-ChildItem $avatarSrc -Force | Where-Object {
-        $_.Name -notin @('.venv', 'scratch', '__pycache__', '.git')
-    } | Copy-Item -Destination $avatarDst -Recurse -Force
 }
 
 # 6. Compile the installer.
