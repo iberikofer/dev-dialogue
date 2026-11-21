@@ -1,10 +1,24 @@
+using DevDialogue.Api.Data;
 using DevDialogue.Api.Models.Dtos;
 using DevDialogue.Api.Models.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DevDialogue.Api.Services.AI;
 
 public class MockAiService : IAiService
 {
+    private readonly IServiceScopeFactory? _scopeFactory;
+
+    public MockAiService() : this(null)
+    {
+    }
+
+    [ActivatorUtilitiesConstructor]
+    public MockAiService(IServiceScopeFactory? scopeFactory)
+    {
+        _scopeFactory = scopeFactory;
+    }
     private static readonly Dictionary<string, List<string>> UkrainianQuestions = new()
     {
         ["frontend"] = new()
@@ -78,49 +92,52 @@ public class MockAiService : IAiService
         }
     };
 
-    public Task<string> GenerateFirstQuestionAsync(CreateInterviewDto dto, string? topicHint, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateFirstQuestionAsync(CreateInterviewDto dto, string? topicHint, CancellationToken cancellationToken = default)
     {
         var isUk = dto.Language.ToLowerInvariant() == "uk";
-        var dict = isUk ? UkrainianQuestions : EnglishQuestions;
-        var directionKey = dto.Direction.ToLowerInvariant();
-
-        if (!dict.TryGetValue(directionKey, out var list) || list.Count == 0)
-        {
-            list = isUk ? UkrainianQuestions["backend"] : EnglishQuestions["backend"];
-        }
+        var selected = await QuestionBankSelector.PickNextQuestionAsync(
+            _scopeFactory,
+            dto.Direction,
+            dto.Level,
+            dto.Language,
+            topicHint,
+            Array.Empty<string>(),
+            0,
+            cancellationToken);
 
         var greeting = isUk
             ? $"Вітаю на технічній співбесіді на позицію {dto.Direction.ToUpperInvariant()} ({dto.Level})! Мене звати AI-інтерв'юер. Давайте почнемо з базових концепцій.\n\n"
             : $"Welcome to your technical interview for the {dto.Direction.ToUpperInvariant()} ({dto.Level}) position! I will be your interviewer today. Let's begin with our first question.\n\n";
 
-        var question = list[0];
-        return Task.FromResult(greeting + question);
+        return greeting + selected.QuestionText;
     }
 
-    public Task<string> GenerateNextResponseAsync(Interview interview, List<InterviewMessageDto> transcript, CancellationToken cancellationToken = default)
+    public async Task<string> GenerateNextResponseAsync(Interview interview, List<InterviewMessageDto> transcript, CancellationToken cancellationToken = default)
     {
         var isUk = interview.Language.ToLowerInvariant() == "uk";
-        var dict = isUk ? UkrainianQuestions : EnglishQuestions;
-        var directionKey = interview.Direction.ToLowerInvariant();
-
-        if (!dict.TryGetValue(directionKey, out var list) || list.Count == 0)
-        {
-            list = isUk ? UkrainianQuestions["backend"] : EnglishQuestions["backend"];
-        }
-
-        // Determine question index based on user message count
         var userMessagesCount = transcript.Count(m => m.Role == "user");
 
         if (userMessagesCount >= 5)
         {
-            var closing = isUk
+            return isUk
                 ? "Дякую! Ви відповіли на всі запитання цієї сесії співбесіди. Зараз ви можете натиснути кнопку 'Завершити співбесіду', щоб я підготував для вас детальний звіт та оцінку знань."
                 : "Thank you! You have answered all primary questions for this interview session. You can now click 'Complete Interview' to generate your comprehensive performance report and scoring.";
-            return Task.FromResult(closing);
         }
 
-        var nextIndex = userMessagesCount % list.Count;
-        var question = list[nextIndex];
+        var askedTexts = transcript
+            .Where(m => m.Role == "assistant")
+            .Select(m => m.Content)
+            .ToList();
+
+        var selected = await QuestionBankSelector.PickNextQuestionAsync(
+            _scopeFactory,
+            interview.Direction,
+            interview.Level,
+            interview.Language,
+            null,
+            askedTexts,
+            userMessagesCount,
+            cancellationToken);
 
         var followUpsUk = new[]
         {
@@ -139,7 +156,7 @@ public class MockAiService : IAiService
         var followUps = isUk ? followUpsUk : followUpsEn;
         var prefix = followUps[userMessagesCount % followUps.Length];
 
-        return Task.FromResult(prefix + question);
+        return prefix + selected.QuestionText;
     }
 
     public Task<InterviewFeedbackDto> GenerateFeedbackAsync(Interview interview, List<InterviewMessageDto> transcript, CancellationToken cancellationToken = default)

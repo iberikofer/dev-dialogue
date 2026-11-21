@@ -14,6 +14,7 @@ Rectangle {
     // Which entry is highlighted: "home", "setup", "session", "admin", "account".
     property string current
     signal navigate(string target)
+    signal openServicesRequested()
 
     readonly property bool showAdmin: authVM.isAdmin && authVM.isAdminViewActive
 
@@ -167,24 +168,26 @@ Rectangle {
 
         Item { Layout.fillHeight: true }
 
-        // ------------------------------------------------- Backend status
+        // ------------------------------------------------- Backend status (minimal; details on hover)
         AbstractButton {
             id: status
             Layout.fillWidth: true
             implicitHeight: 34
             hoverEnabled: true
             enabled: !backendVM.isChecking
-            onClicked: backendVM.checkHealth()
+            onClicked: backendVM.checkAllServices()
             Accessible.name: statusTip.text
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             AppToolTip {
                 id: statusTip
                 side: sidebar.expanded ? "top" : "right"
-                delay: 300
+                delay: 250
                 visible: status.hovered
-                text: backendVM.isOffline
-                    ? qsTr("Server unreachable: showing demo data. Click to check again.")
-                    : qsTr("Connected to the server. Click to check again.")
+                text: backendVM.allServicesReady
+                    ? qsTr("API :5238 · 3D Avatar · %1 · Parakeet STT\nКлік — перевірити знову").arg(backendVM.localModelName)
+                    : (backendVM.isOffline
+                        ? qsTr("Сервер недоступний (офлайн-демо). Клік — перевірити знову.")
+                        : qsTr("Частина сервісів ще запускається. Клік — перевірити знову."))
             }
 
             background: Rectangle {
@@ -197,9 +200,9 @@ Rectangle {
                     x: sidebar.expanded ? 20 : (parent.width - width) / 2
                     anchors.verticalCenter: parent.verticalCenter
                     size: 8
-                    color: backendVM.isOffline ? Theme.amber500 : Theme.emerald500
-                    pingColor: backendVM.isOffline ? Theme.amber400 : Theme.emerald400
-                    pinging: backendVM.isOffline || backendVM.isChecking
+                    color: backendVM.allServicesReady ? Theme.emerald500 : (backendVM.isOffline ? Theme.amber500 : Theme.blue400)
+                    pingColor: backendVM.allServicesReady ? Theme.emerald400 : Theme.amber400
+                    pinging: backendVM.isOffline || backendVM.isChecking || backendVM.isManagingServices
                 }
                 MonoText {
                     anchors.left: statusDot.right
@@ -207,7 +210,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: sidebar.expanded
                     text: backendVM.isChecking ? qsTr("Checking...")
-                        : backendVM.isOffline ? qsTr("Offline · demo") : qsTr("Online")
+                        : (backendVM.isOffline ? qsTr("Offline · demo") : qsTr("Online"))
                     color: backendVM.isOffline ? Theme.amber300 : Theme.zinc400
                     font.pixelSize: Typography.tiny
                 }

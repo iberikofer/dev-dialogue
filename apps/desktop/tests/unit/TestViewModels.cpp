@@ -2,7 +2,9 @@
 
 #include <QCoreApplication>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QStringList>
+#include <QTemporaryDir>
 #include <QThread>
 #include <QVariantMap>
 #include <functional>
@@ -337,6 +339,28 @@ TEST_F(ViewModelTest, SetupStartsLocallyAtOnceWhileTheBackendIsKnownToBeDown) {
     EXPECT_TRUE(requests.isEmpty());
 }
 
+TEST_F(ViewModelTest, SetupBlocksInterviewWhenLocalModelMissing) {
+    serve([](const Request&) { return jsonResponse(200, nlohmann::json::object()); });
+
+    NavigationViewModel navigation;
+    SetupViewModel setup(interviewService, &navigation);
+    setup.setLocalModelReadyProbe([]() { return false; });
+
+    bool started = false;
+    bool modelRequiredEmitted = false;
+    QObject::connect(&setup, &SetupViewModel::interviewStarted, &setup, [&]() { started = true; });
+    QObject::connect(&setup, &SetupViewModel::localModelRequired, &setup, [&]() { modelRequiredEmitted = true; });
+
+    setup.start();
+    QCoreApplication::processEvents();
+
+    EXPECT_FALSE(started);
+    EXPECT_TRUE(modelRequiredEmitted);
+    EXPECT_FALSE(setup.errorMessage().isEmpty());
+    EXPECT_EQ(navigation.currentViewIndex(), NavigationViewModel::Landing);
+    EXPECT_TRUE(requests.isEmpty());
+}
+
 // ===========================================================================
 // ChatViewModel
 // ===========================================================================
@@ -528,6 +552,55 @@ TEST_F(ViewModelTest, ChatResumesAnInterviewFromItsTranscript) {
     EXPECT_EQ(requests.first().toStdString(), "GET /api/interviews/interview-7");
 }
 
+TEST_F(ViewModelTest, ChatFollowUpButtonsAndNextQuestionClearsTranscript) {
+    serve([](const Request& request) {
+        const nlohmann::json reqBody = nlohmann::json::parse(request.body.toStdString());
+        const std::string action = reqBody.contains("action") ? reqBody.at("action").get<std::string>() : "";
+        models::SendMessageResponse resp;
+        if (action == "explain_reference") {
+            resp.message = "Reference explanation.";
+            resp.questionCount = 1;
+            resp.awaitingNextAction = true;
+            resp.suggestedActions = {"explain_answer", "next_question"};
+        } else if (action == "next_question") {
+            resp.message = "Second question from DB.";
+            resp.questionCount = 2;
+            resp.awaitingNextAction = false;
+        } else {
+            resp.message = "Оцінка: 87/100";
+            resp.questionCount = 1;
+            resp.awaitingNextAction = true;
+            resp.suggestedActions = {"explain_reference", "explain_answer", "next_question"};
+        }
+        return jsonResponse(200, resp);
+    });
+
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    chat.beginSession("interview-99", "backend", "junior", "uk", "First question", false);
+
+    chat.sendAnswer("My answer");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
+    EXPECT_TRUE(chat.awaitingNextAction());
+    EXPECT_EQ(chat.suggestedActions().size(), 3);
+    EXPECT_EQ(chat.candidateAnswersCount(), 1);
+    EXPECT_EQ(chat.messagesModel()->rowCount(), 3);
+
+    chat.triggerFollowUpAction("explain_reference");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
+    EXPECT_TRUE(chat.awaitingNextAction());
+    EXPECT_EQ(chat.candidateAnswersCount(), 1);
+    EXPECT_EQ(chat.messagesModel()->rowCount(), 5);
+
+    chat.triggerFollowUpAction("next_question");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy(); }));
+    EXPECT_FALSE(chat.awaitingNextAction());
+    EXPECT_TRUE(chat.suggestedActions().isEmpty());
+    // One chat = one question: previous question thread cleared to the fresh question only
+    ASSERT_EQ(chat.messagesModel()->rowCount(), 1);
+    EXPECT_EQ(cell(chat.messagesModel(), 0, MessageListModel::ContentRole).toStdString(), "Second question from DB.");
+}
+
 TEST_F(ViewModelTest, ChatANewSessionDiscardsThePreviousTranscript) {
     NavigationViewModel navigation;
     ChatViewModel chat(interviewService, &navigation);
@@ -636,6 +709,64 @@ TEST_F(ViewModelTest, ReportOfAServerInterviewThatFailsToLoadShowsAnError) {
     EXPECT_FALSE(report.isDemoData());
     EXPECT_TRUE(report.questionScores().isEmpty());
     EXPECT_TRUE(report.errorMessage().contains("Database unavailable"));
+}
+
+TEST_F(ViewModelTest, ReportShowsTimingMetricsAndExportsValidPdf) {
+    serve([](const Request&) {
+        models::InterviewDetail detail;
+        detail.id = "interview-pdf";
+        detail.direction = models::InterviewDirection::Qa;
+        detail.level = models::InterviewLevel::Junior;
+        detail.createdAt = "2026-11-17T03:00:00Z";
+        models::InterviewFeedbackReport feedback;
+        feedback.summary = "Strong smoke vs regression answer, weak on verification vs validation.";
+        feedback.score = 62;
+        feedback.averageResponseSeconds = 21;
+        feedback.totalDurationSeconds = 64;
+        feedback.timingAnalysis = "Consistent 21s average pace with quick 4s skip on first question.";
+        feedback.strengths = {"Smoke vs regression testing (88/100)"};
+        feedback.weaknesses = {"Verification vs validation (15/100)"};
+        feedback.recommendations = {{"Test Pyramid", "https://martinfowler.com/articles/practical-test-pyramid.html"}};
+        models::QuestionScoreItem q1;
+        q1.question = "Explain smoke vs regression testing";
+        q1.score = 88;
+        q1.comment = "Accurate and concise.";
+        q1.responseSeconds = 28;
+        q1.userAnswer = "Smoke verifies build stability; regression checks existing features.";
+        q1.criteria = {{"accuracy", 90}, {"completeness", 85}, {"terminology", 88}, {"clarity", 86}};
+        feedback.questionScores = {q1};
+        detail.feedback = feedback;
+        return jsonResponse(200, detail);
+    });
+
+    ReportViewModel report(interviewService);
+    report.load("interview-pdf");
+    ASSERT_TRUE(waitUntil([&]() { return !report.loading(); }));
+
+    ASSERT_TRUE(report.hasReport());
+    EXPECT_EQ(report.averageResponseSeconds(), 21);
+    EXPECT_EQ(report.totalDurationSeconds(), 64);
+    EXPECT_EQ(report.timingAnalysis().toStdString(),
+              "Consistent 21s average pace with quick 4s skip on first question.");
+
+    ASSERT_EQ(report.questionScores().size(), 1);
+    const QVariantMap q = report.questionScores().first().toMap();
+    EXPECT_EQ(q.value("responseSeconds").toInt(), 28);
+    EXPECT_TRUE(q.value("hasCriteria").toBool());
+    EXPECT_EQ(q.value("accuracy").toInt(), 90);
+
+    QTemporaryDir tempDir;
+    ASSERT_TRUE(tempDir.isValid());
+    const QString outPath = tempDir.filePath("test-report.pdf");
+    const QString saved = report.exportPdf(outPath);
+    EXPECT_EQ(saved, outPath);
+
+    QFile pdfFile(outPath);
+    ASSERT_TRUE(pdfFile.exists());
+    ASSERT_TRUE(pdfFile.open(QIODevice::ReadOnly));
+    const QByteArray header = pdfFile.read(8);
+    EXPECT_TRUE(header.startsWith("%PDF-"));
+    EXPECT_GT(pdfFile.size(), 1500);
 }
 
 TEST_F(ViewModelTest, ReportOfAServerInterviewNeedsTheServer) {
@@ -1082,6 +1213,52 @@ TEST_F(ViewModelTest, BackendStatusFollowsTheHealthCheck) {
     EXPECT_FALSE(status.isChecking());
 }
 
+TEST_F(ViewModelTest, BackendStatusReportsLocalModelMissingAndReady) {
+    bool downloaded = false;
+    bool downloadTriggered = false;
+    serve([&](const Request& req) {
+        if (req.path == "/api/health/local-model") {
+            return jsonResponse(200, {
+                {"aiProvider", "Ollama"},
+                {"model", "gemma4:e4b"},
+                {"required", true},
+                {"ollamaInstalled", true},
+                {"ollamaRunning", true},
+                {"modelDownloaded", downloaded},
+                {"isDownloading", false},
+                {"downloadProgress", downloaded ? 100 : 0},
+                {"statusText", downloaded ? "Ready" : "Model not downloaded"},
+                {"error", ""}
+            });
+        }
+        if (req.path == "/api/health/local-model/download") {
+            downloadTriggered = true;
+            downloaded = true;
+            return jsonResponse(202, {
+                {"model", "gemma4:e4b"},
+                {"required", true},
+                {"modelDownloaded", true},
+                {"isDownloading", false},
+                {"downloadProgress", 100},
+                {"statusText", "Ready"},
+                {"error", ""}
+            });
+        }
+        return jsonResponse(200, {{"status", "healthy"}});
+    });
+
+    BackendStatusViewModel status(client);
+    status.refreshLocalModelStatus();
+    ASSERT_TRUE(waitUntil([&]() { return status.localModelChecked(); }));
+    EXPECT_FALSE(status.localModelReady());
+    EXPECT_EQ(status.localModelName().toStdString(), "gemma4:e4b");
+
+    status.downloadLocalModel();
+    ASSERT_TRUE(waitUntil([&]() { return status.localModelReady(); }));
+    EXPECT_TRUE(downloadTriggered);
+    EXPECT_EQ(status.modelDownloadProgress(), 100);
+}
+
 // ===========================================================================
 // SettingsViewModel
 // ===========================================================================
@@ -1174,4 +1351,108 @@ TEST_F(ViewModelTest, ChatBecomesLocalWhenTheNetworkDropsMidSession) {
     EXPECT_TRUE(chat.isLocalSession());
     EXPECT_EQ(sessionChanges, 1);
     EXPECT_EQ(chat.messagesModel()->rowCount(), 3);
+}
+
+TEST_F(ViewModelTest, ChatAvatarControlsEmitSignalsAndSyncState) {
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+
+    chat.setAvatarVolume(1.5);
+    EXPECT_DOUBLE_EQ(chat.avatarVolume(), 1.0);
+    chat.setAvatarVolume(-0.2);
+    EXPECT_DOUBLE_EQ(chat.avatarVolume(), 0.0);
+
+    chat.toggleAvatarMute();
+    EXPECT_TRUE(chat.avatarMuted());
+    chat.setAvatarMuted(false);
+    EXPECT_FALSE(chat.avatarMuted());
+
+    chat.setAvatarVoice("en-US-AvaNeural");
+    EXPECT_EQ(chat.avatarVoice(), QString("en-US-AvaNeural"));
+    chat.setAvatarGender("Female");
+    EXPECT_EQ(chat.avatarGender(), QString("Female"));
+    chat.setAvatarPreset("cyber");
+    EXPECT_EQ(chat.avatarPreset(), QString("cyber"));
+
+    chat.toggleAccessory("Glasses");
+    chat.toggleAccessory("Tie");
+    chat.setAccessoryVisible("Hat", true);
+    EXPECT_TRUE(chat.glassesVisible());
+    EXPECT_TRUE(chat.tieVisible());
+    EXPECT_TRUE(chat.hatVisible());
+    EXPECT_FALSE(chat.hornsVisible());
+    EXPECT_FALSE(chat.haloVisible());
+
+    QString lastReactEmotion;
+    QStringList lastSeq;
+    QObject::connect(&chat, &ChatViewModel::avatarReactRequested, &chat,
+                     [&](const QString& emo, const QStringList& seq, const QJsonArray&) {
+                         lastReactEmotion = emo;
+                         lastSeq = seq;
+                     });
+    chat.triggerTestEmotion("wink");
+    EXPECT_EQ(chat.avatarEmotion(), QString("wink"));
+    EXPECT_EQ(lastReactEmotion, QString("wink"));
+    EXPECT_EQ(lastSeq, (QStringList{QStringLiteral("Wink")}));
+
+    int stops = 0;
+    QObject::connect(&chat, &ChatViewModel::avatarSpeechStopRequested, &chat, [&]() { ++stops; });
+    chat.stopAvatarSpeech();
+    EXPECT_EQ(stops, 1);
+
+    EXPECT_GE(chat.availableVoices().size(), 10);
+    EXPECT_GE(chat.availablePresets().size(), 6);
+    EXPECT_GE(chat.availableSoundEffects().size(), 5);
+
+    EXPECT_EQ(chat.avatarOutputMode(), QString("voice"));
+    chat.toggleAvatarOutputMode();
+    EXPECT_EQ(chat.avatarOutputMode(), QString("sound"));
+    chat.setAvatarSoundEffect("dialogue_blip_synth.wav");
+    EXPECT_EQ(chat.avatarSoundEffect(), QString("dialogue_blip_synth.wav"));
+    chat.toggleAvatarOutputMode();
+    EXPECT_EQ(chat.avatarOutputMode(), QString("voice"));
+}
+
+TEST_F(ViewModelTest, ChatAppliesBackendAvatarEmotionAndUiCommands) {
+    serve([](const Request&) {
+        models::SendMessageResponse resp;
+        resp.message = "Чудова відповідь!";
+        resp.questionCount = 2;
+        resp.isCompleted = false;
+        resp.awaitingNextAction = true;
+        resp.lastScore = 91;
+        resp.suggestedActions = {"explain_reference", "next_question"};
+        resp.emotion = "smile";
+        resp.actionsSequence = {"Smile", "Wink"};
+        resp.uiCommands = {
+            models::AvatarUiCommand{"accessory_on", "Glasses"},
+            models::AvatarUiCommand{"set_gender", "Female"}
+        };
+        return jsonResponse(200, resp);
+    });
+
+    NavigationViewModel navigation;
+    ChatViewModel chat(interviewService, &navigation);
+    chat.beginSession("interview-77", "frontend", "junior", "uk", "Поясніть замикання?", false);
+
+    QString spokenText;
+    QString spokenEmotion;
+    QStringList spokenSeq;
+    QJsonArray spokenUi;
+    QObject::connect(&chat, &ChatViewModel::avatarSpeakRequested, &chat,
+                     [&](const QString& text, const QString& emo, const QStringList& seq, const QJsonArray& ui) {
+                         spokenText = text;
+                         spokenEmotion = emo;
+                         spokenSeq = seq;
+                         spokenUi = ui;
+                     });
+
+    chat.sendAnswer("Замикання зберігає доступ до лексичного оточення.");
+    ASSERT_TRUE(waitUntil([&]() { return !chat.isBusy() && !spokenText.isEmpty(); }));
+
+    EXPECT_EQ(spokenEmotion, QString("smile"));
+    EXPECT_EQ(spokenSeq, (QStringList{"Smile", "Wink"}));
+    EXPECT_EQ(spokenUi.size(), 2);
+    EXPECT_TRUE(chat.glassesVisible());
+    EXPECT_EQ(chat.avatarGender(), QString("Female"));
 }

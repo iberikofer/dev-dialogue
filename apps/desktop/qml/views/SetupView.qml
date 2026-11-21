@@ -10,6 +10,7 @@ AppPage {
     id: page
 
     active: StackLayout.isCurrentItem
+    onActiveChanged: if (active) backendVM.ensureAllServicesRunning()
     title: qsTr("New interview")
     subtitle: qsTr("Pick a track, a level and the interview language.")
 
@@ -68,6 +69,19 @@ AppPage {
                 id: choiceColumn
                 width: choices.width - 12
                 spacing: 12
+
+                AlertBox {
+                    visible: backendVM.localModelChecked && !backendVM.localModelReady
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 4
+                    text: backendVM.isDownloadingModel
+                        ? (backendVM.localModelStatus !== ""
+                            ? backendVM.localModelStatus + " " + qsTr("Interview will unlock once ready.")
+                            : qsTr("Downloading local AI model %1 (%2%)... Interview will unlock once ready.")
+                                .arg(backendVM.localModelName).arg(backendVM.modelDownloadProgress))
+                        : qsTr("Local AI model (%1) is not downloaded. Please download it before starting an interview.")
+                            .arg(backendVM.localModelName)
+                }
 
                 AlertBox {
                     visible: setupVM.errorMessage !== ""
@@ -274,9 +288,12 @@ AppPage {
                 TactileButton {
                     Layout.fillWidth: true
                     Layout.topMargin: 24
-                    text: setupVM.isBusy ? qsTr("Starting...") : qsTr("Start interview")
+                    text: setupVM.isBusy ? qsTr("Starting...")
+                        : (backendVM.localModelChecked && !backendVM.localModelReady
+                            ? qsTr("Download local model")
+                            : qsTr("Start interview"))
                     iconRight: setupVM.isBusy ? "" : "arrow-right"
-                    busy: setupVM.isBusy
+                    busy: setupVM.isBusy || backendVM.isDownloadingModel
                     enabled: !setupVM.isBusy
                     implicitHeight: 46
                     glow: true

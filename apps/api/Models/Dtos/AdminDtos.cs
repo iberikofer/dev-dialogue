@@ -11,7 +11,8 @@ public record QuestionBankDto(
     string QuestionText,
     bool IsActive,
     Guid? CreatedBy,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string? ExpectedAnswer = null
 );
 
 public record CreateQuestionDto(
@@ -33,7 +34,10 @@ public record CreateQuestionDto(
 
     [Required(ErrorMessage = "Текст питання (QuestionText) є обов'язковим")]
     [MaxLength(3000, ErrorMessage = "Текст питання не може перевищувати 3000 символів")]
-    string QuestionText
+    string QuestionText,
+
+    [MaxLength(3000, ErrorMessage = "Еталонна відповідь не може перевищувати 3000 символів")]
+    string? ExpectedAnswer = null
 );
 
 public record UpdateQuestionDto(
@@ -52,5 +56,8 @@ public record UpdateQuestionDto(
     [MaxLength(3000, ErrorMessage = "Текст питання не може перевищувати 3000 символів")]
     string? QuestionText,
 
-    bool? IsActive
+    bool? IsActive,
+
+    [MaxLength(3000, ErrorMessage = "Еталонна відповідь не може перевищувати 3000 символів")]
+    string? ExpectedAnswer = null
 );

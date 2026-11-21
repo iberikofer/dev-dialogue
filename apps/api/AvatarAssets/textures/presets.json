@@ -1,0 +1,123 @@
+[
+  {
+    "id": "realistic",
+    "name": "Realistic Fair",
+    "name_ua": "👤 Світла європейська",
+    "category": "realistic",
+    "desc": "Natural fair human skin with vascular blush, pores, hazel iris & veined sclera",
+    "desc_ua": "Анатомічна текстура світлої шкіри з порами, рум'янцем, карими очима та капілярами",
+    "path": "textures/realistic/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "warm_olive",
+    "name": "Warm Olive",
+    "name_ua": "🫒 Смуглява оливкова",
+    "category": "realistic",
+    "desc": "Warm Mediterranean olive complexion with golden undertones and dark hazel eyes",
+    "desc_ua": "Тепла південна оливкова шкіра із золотавим підтоном, темними карими очима та виразними бровами",
+    "path": "textures/warm_olive/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "freckled",
+    "name": "Sun-Kissed Freckles",
+    "name_ua": "✨ Сонячні веснянки",
+    "category": "realistic",
+    "desc": "Peachy porcelain skin with realistic organic freckles, rosy blush & Nordic blue eyes",
+    "desc_ua": "Світла персикова шкіра з органічними золотистими веснянками, ніжним рум'янцем та нордичними блакитними очима",
+    "path": "textures/freckled/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "deep_ebony",
+    "name": "Deep Ebony",
+    "name_ua": "💎 Глибока ебенова",
+    "category": "realistic",
+    "desc": "Melanin-rich deep mahogany skin with radiant hydrated specular glow and obsidian amber eyes",
+    "desc_ua": "Глибока шоколадно-ебенова шкіра з природним сяючим глянцем, ожиновими губами та бурштиновими очима",
+    "path": "textures/deep_ebony/",
+    "metalness": 0.0,
+    "roughness": 0.85
+  },
+  {
+    "id": "golden_asian",
+    "name": "Golden Porcelain",
+    "name_ua": "🌸 Золотава східна",
+    "category": "realistic",
+    "desc": "Smooth East Asian porcelain skin with warm golden undertone, delicate blush & onyx eyes",
+    "desc_ua": "Ніжна порцеляново-золотава східноазіатська шкіра з тонкою мікроструктурою та темними оніксовими очима",
+    "path": "textures/golden_asian/",
+    "metalness": 0.0,
+    "roughness": 0.95
+  },
+  {
+    "id": "weathered",
+    "name": "Weathered Bronze",
+    "name_ua": "🧭 Зріла засмагла",
+    "category": "realistic",
+    "desc": "Rugged sun-weathered bronze complexion with character micro-creases & steel hazel-green eyes",
+    "desc_ua": "Засмагла бронзова шкіра мандрівника з виразною мікротекстурою та сталевими зеленими очима",
+    "path": "textures/weathered/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "cyber",
+    "name": "Cyber Android",
+    "name_ua": "🤖 Кіберпанк",
+    "category": "stylized",
+    "desc": "Non-human titanium composite shell with glowing cyan circuits & tech iris",
+    "desc_ua": "Синтетична титанова броня з неоновими бірюзовими мікросхемами та оптичним сенсором",
+    "path": "textures/cyber/",
+    "metalness": 0.65,
+    "roughness": 0.6
+  },
+  {
+    "id": "alien",
+    "name": "Bioluminescent Alien",
+    "name_ua": "👽 Неземна / Алієн",
+    "category": "stylized",
+    "desc": "Monotonic alien violet skin with glowing turquoise bioluminescent markings",
+    "desc_ua": "Монотонна фіолетова інопланетна шкіра з сяючими біолюмінесцентними точками",
+    "path": "textures/alien/",
+    "metalness": 0.08,
+    "roughness": 0.8
+  },
+  {
+    "id": "noir",
+    "name": "Noir Chiaroscuro",
+    "name_ua": "🎬 Чорно-біла",
+    "category": "stylized",
+    "desc": "High-contrast monochromatic graphic novel aesthetic with deep charcoal shadows",
+    "desc_ua": "Висококонтрастний монохромний нуар зі стрімкими тінями та світлом",
+    "path": "textures/noir/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  },
+  {
+    "id": "stylized",
+    "name": "Stylized Anime",
+    "name_ua": "🎨 Аніме",
+    "category": "stylized",
+    "desc": "Porcelain cel-shaded skin, soft pastel blush & sparkling emerald anime eyes",
+    "desc_ua": "Чиста порцелянова шкіра, ніжний рум'янець та виразні смарагдові очі",
+    "path": "textures/stylized/",
+    "metalness": 0.0,
+    "roughness": 0.9
+  },
+  {
+    "id": "clay",
+    "name": "Studio Clay (No Textures)",
+    "name_ua": "🏛️ Без текстур (Глина)",
+    "category": "stylized",
+    "desc": "Clean untextured matte sculpture finish resembling an artist's studio bust",
+    "desc_ua": "Мінімалістична матова скульптурна глина без текстур, як у художній майстерні",
+    "path": "textures/clay/",
+    "metalness": 0.0,
+    "roughness": 1.0
+  }
+]
