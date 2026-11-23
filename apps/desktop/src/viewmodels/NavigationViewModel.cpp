@@ -46,4 +46,8 @@ void NavigationViewModel::navigateToAdmin() {
   setCurrentViewIndex(ViewIndex::Admin);
 }
 
+void NavigationViewModel::navigateToPreparation() {
+  setCurrentViewIndex(ViewIndex::Preparation);
+}
+
 } // namespace devdialogue::viewmodels

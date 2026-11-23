@@ -39,7 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "installlocalai"; Description: "Download && configure local AI (gemma4:e4b) + Speech-to-Text (Parakeet TDT 0.6B v3) — required before starting interviews"; GroupDescription: "Local AI & Voice Models:"
+Name: "installlocalai"; Description: "Download && configure local AI (gemma4:e4b) + Speech-to-Text (Parakeet TDT 0.6B v3) — required before starting interviews"; GroupDescription: "Local AI & Voice Models:"; Flags: unchecked
 
 [Files]
 Source: "..\dist\stage\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs

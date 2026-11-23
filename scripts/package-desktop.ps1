@@ -68,16 +68,21 @@ if (-not (Test-Path $exe)) { throw "Built executable not found in $buildDir." }
 
 # 4. Locate windeployqt and the Qt tool directories.
 $qtBin = 'C:\msys64\ucrt64\bin'
+$vcpkgQtBin = Join-Path $buildDir 'vcpkg_installed\x64-windows\tools\Qt6\bin'
+$vcpkgBin = Join-Path $buildDir 'vcpkg_installed\x64-windows\bin'
 $deploy = Find-Tool 'windeployqt' @(
+    (Join-Path $vcpkgQtBin 'windeployqt.exe'),
+    (Join-Path $vcpkgQtBin 'windeployqt6.exe'),
     (Join-Path $qtBin 'windeployqt.exe'),
     (Join-Path $qtBin 'windeployqt-qt6.exe'),
     (Join-Path $qtBin 'windeployqt6.exe')
 )
-if (-not $deploy) { throw 'windeployqt not found. Install Qt 6 (MSYS2) or add it to PATH.' }
-$qtTools = Join-Path (Split-Path -Parent $qtBin) 'share\qt6\bin'
+if (-not $deploy) { throw 'windeployqt not found. Install Qt 6 (MSYS2 or vcpkg) or add it to PATH.' }
+$deployDir = Split-Path -Parent $deploy
+$qtTools = Join-Path (Split-Path -Parent $deployDir) 'share\qt6\bin'
 
-# windeployqt starts qmlimportscanner, which MSYS2 keeps in share/qt6/bin.
-$env:PATH = "$qtBin;$qtTools;$env:PATH"
+# windeployqt starts qmlimportscanner.
+$env:PATH = "$deployDir;$vcpkgBin;$qtBin;$qtTools;$env:PATH"
 
 # 5. Stage the runtime: the executable, the Qt runtime, the plugins and the
 #    QML modules - nothing else, no build leftovers.
@@ -91,6 +96,28 @@ if (Test-Path $webview2Loader) {
 }
 & $deploy --qmldir (Join-Path $root 'apps\desktop\qml') --no-translations (Join-Path $stageDir $exeName)
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed.' }
+
+# Copy third-party runtime dependencies that windeployqt does not deploy
+# (e.g. double-conversion.dll, zstd.dll, pcre2-16.dll, libpng16.dll, freetype.dll, harfbuzz.dll, zlib1.dll).
+# CMake and vcpkg place these directly into the build directory and vcpkg bin directory.
+Get-ChildItem -Path $buildDir -Filter '*.dll' -File | Where-Object {
+    $_.Name -notmatch '(?i)gtest|gmock'
+} | ForEach-Object {
+    $targetFile = Join-Path $stageDir $_.Name
+    if (-not (Test-Path $targetFile)) {
+        Copy-Item $_.FullName $targetFile -Force
+    }
+}
+if (Test-Path $vcpkgBin) {
+    Get-ChildItem -Path $vcpkgBin -Filter '*.dll' -File | Where-Object {
+        $_.Name -notmatch '(?i)gtest|gmock|designer|uitools|shadertools'
+    } | ForEach-Object {
+        $targetFile = Join-Path $stageDir $_.Name
+        if (-not (Test-Path $targetFile)) {
+            Copy-Item $_.FullName $targetFile -Force
+        }
+    }
+}
 
 # The QML module of the app itself has to sit next to the executable: the QML
 # engine resolves "import DevDialogue.App" from the file system, not from the
@@ -111,15 +138,17 @@ QmlImports = qml
 Plugins = .
 "@ | Set-Content -Path (Join-Path $stageDir 'qt.conf') -Encoding ASCII
 
-# windeployqt does not copy every runtime dependency of the MinGW build (ICU
-# above all). Resolve the dependency closure and fill the gaps.
+# windeployqt does not copy every runtime dependency of the build (ICU,
+# double-conversion, zstd, pcre2, libpng, freetype, etc.). Resolve the dependency closure and fill any gaps.
 $objdump = Find-Tool 'objdump' @(
-    (Join-Path $qtBin 'objdump.exe')
+    (Join-Path $qtBin 'objdump.exe'),
+    'C:\msys64\mingw64\bin\objdump.exe'
 )
 if ($objdump) {
     $present = @{}
     Get-ChildItem $stageDir -Recurse -File -Include *.dll, *.exe |
         ForEach-Object { $present[$_.Name] = $true }
+    $candidateDirs = @($vcpkgBin, $buildDir, $qtBin)
     $scanned = @()
     do {
         $added = $false
@@ -130,11 +159,15 @@ if ($objdump) {
                 ForEach-Object { ($_.Line -replace '.*DLL Name:\s*', '').Trim() }
             foreach ($import in $imports) {
                 if ($present[$import]) { continue }
-                $source = Join-Path $qtBin $import
-                if (-not (Test-Path $source)) { continue }
-                Copy-Item $source $stageDir
-                $present[$import] = $true
-                $added = $true
+                foreach ($dir in $candidateDirs) {
+                    $source = Join-Path $dir $import
+                    if (Test-Path $source) {
+                        Copy-Item $source $stageDir -Force
+                        $present[$import] = $true
+                        $added = $true
+                        break
+                    }
+                }
             }
         }
     } while ($added)
@@ -153,7 +186,10 @@ if (Test-Path $apiProj) {
 $iscc = Find-Tool 'ISCC' @(
     (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe'),
     'C:\Program Files (x86)\Inno Setup 6\ISCC.exe',
-    'C:\Program Files\Inno Setup 6\ISCC.exe'
+    'C:\Program Files\Inno Setup 6\ISCC.exe',
+    'C:\ProgramData\chocolatey\bin\iscc.exe',
+    (Join-Path $env:USERPROFILE 'scoop\apps\inno-setup\current\ISCC.exe'),
+    (Join-Path $env:USERPROFILE 'scoop\shims\iscc.exe')
 )
 if (-not $iscc) {
     throw 'Inno Setup 6 (ISCC.exe) not found. Install it with: winget install JRSoftware.InnoSetup'

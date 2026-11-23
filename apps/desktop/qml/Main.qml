@@ -62,7 +62,7 @@ ApplicationWindow {
 
     // Stack index per NavigationViewModel::ViewIndex. Landing (0) has no
     // screen in the app and shows Home.
-    readonly property int pageIndex: accountOpen ? 6
+    readonly property int pageIndex: accountOpen ? 7
         : (navVM.currentViewIndex === 0 ? 1 : navVM.currentViewIndex)
 
     readonly property string sidebarSection: {
@@ -73,6 +73,7 @@ ApplicationWindow {
         case 3: return "session"
         case 4: return "home"
         case 5: return "admin"
+        case 6: return "preparation"
         default: return ""
         }
     }
@@ -82,6 +83,7 @@ ApplicationWindow {
         switch (target) {
         case "home": navVM.navigateToDashboard(); break
         case "setup": navVM.navigateToSetup(); break
+        case "preparation": navVM.navigateToPreparation(); break
         case "session":
             if (chatVM.hasActiveSession) {
                 backendVM.ensureAllServicesRunning()
@@ -138,6 +140,7 @@ ApplicationWindow {
     // Sample content shown without a backend follows the interface language.
     Binding { target: reportVM; property: "uiLanguage"; value: I18n.language }
     Binding { target: adminVM; property: "uiLanguage"; value: I18n.language }
+    Binding { target: preparationVM; property: "uiLanguage"; value: I18n.language }
 
     Component.onCompleted: {
         if (navVM.currentViewIndex === 0)
@@ -254,6 +257,11 @@ ApplicationWindow {
         onActivated: rootWindow.go("setup")
     }
     Shortcut {
+        sequences: ["Ctrl+P"]
+        enabled: authVM.isAuthenticated
+        onActivated: rootWindow.go("preparation")
+    }
+    Shortcut {
         sequence: "Ctrl+3"
         enabled: authVM.isAuthenticated && chatVM.hasActiveSession
         onActivated: rootWindow.go("session")
@@ -337,7 +345,8 @@ ApplicationWindow {
                 }      // 3
                 ReportView {}        // 4
                 AdminView {}         // 5
-                AccountView {}       // 6: local page, see accountOpen
+                PreparationView {}   // 6
+                AccountView {}       // 7: local page, see accountOpen
             }
         }
     }

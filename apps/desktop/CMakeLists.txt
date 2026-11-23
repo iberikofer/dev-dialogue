@@ -55,6 +55,7 @@ set(DESKTOP_UI_VIEWMODEL_SOURCES
     src/viewmodels/FormValidator.cpp
     src/viewmodels/InterviewListModel.cpp
     src/viewmodels/MessageListModel.cpp
+    src/viewmodels/PreparationViewModel.cpp
     src/viewmodels/QuestionListModel.cpp
     src/viewmodels/ReportViewModel.cpp
     src/viewmodels/SettingsViewModel.cpp
@@ -70,6 +71,7 @@ set(DESKTOP_UI_VIEWMODEL_HEADERS
     include/viewmodels/FormValidator.hpp
     include/viewmodels/InterviewListModel.hpp
     include/viewmodels/MessageListModel.hpp
+    include/viewmodels/PreparationViewModel.hpp
     include/viewmodels/QuestionListModel.hpp
     include/viewmodels/ReportViewModel.hpp
     include/viewmodels/SettingsViewModel.hpp
@@ -88,6 +90,7 @@ add_executable(DevDialogue
     
     # Models & Contracts
     include/models/ApiContracts.hpp
+    include/models/PreparationModels.hpp
 
     # Network
     src/network/ApiClient.cpp
@@ -104,6 +107,8 @@ add_executable(DevDialogue
     include/services/AvatarWebViewHost.hpp
     include/services/MicrophoneService.hpp
     include/services/WebcamService.hpp
+    include/services/IPreparationService.hpp
+    include/services/DemoPreparationService.hpp
     src/services/InMemorySecureStorage.cpp
     src/services/QtKeychainSecureStorage.cpp
     src/services/AuthService.cpp
@@ -112,6 +117,7 @@ add_executable(DevDialogue
     src/services/AvatarWebViewHost.cpp
     src/services/MicrophoneService.cpp
     src/services/WebcamService.cpp
+    src/services/DemoPreparationService.cpp
     
     # ViewModels
     src/viewmodels/AuthViewModel.cpp
@@ -129,6 +135,7 @@ endif()
 
 target_include_directories(DevDialogue PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webview2/build/native/include
 )
 
@@ -250,6 +257,7 @@ qt_add_qml_module(DevDialogue
         qml/views/LoginView.qml
         qml/views/DashboardView.qml
         qml/views/SetupView.qml
+        qml/views/PreparationView.qml
         qml/views/ChatRoomView.qml
         qml/views/ReportView.qml
         qml/views/AdminView.qml
@@ -279,11 +287,13 @@ if(GTest_FOUND)
         tests/unit/TestFormValidator.cpp
         tests/unit/TestListModels.cpp
         tests/unit/TestViewModels.cpp
+        tests/unit/TestPreparation.cpp
 
         # Headers for AUTOMOC
         include/core/AppConfig.hpp
         include/core/Constants.hpp
         include/models/ApiContracts.hpp
+        include/models/PreparationModels.hpp
         include/network/ApiClient.hpp
         include/network/NetworkEndpoints.hpp
         include/services/ISecureStorage.hpp
@@ -292,6 +302,8 @@ if(GTest_FOUND)
         include/services/AuthService.hpp
         include/services/InterviewService.hpp
         include/services/AdminService.hpp
+        include/services/IPreparationService.hpp
+        include/services/DemoPreparationService.hpp
         include/viewmodels/NavigationViewModel.hpp
         ${DESKTOP_UI_VIEWMODEL_HEADERS}
 
@@ -303,6 +315,7 @@ if(GTest_FOUND)
         src/services/AuthService.cpp
         src/services/InterviewService.cpp
         src/services/AdminService.cpp
+        src/services/DemoPreparationService.cpp
         src/viewmodels/NavigationViewModel.cpp
         ${DESKTOP_UI_VIEWMODEL_SOURCES}
     )

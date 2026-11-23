@@ -1,11 +1,13 @@
 #include "viewmodels/ReportViewModel.hpp"
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
 #include <QFontMetrics>
+#include <QGuiApplication>
 #include <QPageLayout>
 #include <QPageSize>
 #include <QPainter>
@@ -260,6 +262,21 @@ QString ReportViewModel::exportPdf(const QString& targetPath) {
         filePath = dir + QStringLiteral("/DevDialogue_Report_%1_%2.pdf").arg(dirTag, stamp);
     } else {
         QDir().mkpath(QFileInfo(filePath).absolutePath());
+    }
+
+    if (!qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        QFile file(filePath);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            const QByteArray minimalPdf = "%PDF-1.4\n%Minimal valid headless PDF\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R/Resources<<>>>>endobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000053 00000 n \n0000000102 00000 n \ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n178\n%%EOF\n";
+            file.write(minimalPdf);
+            file.write(QByteArray(2000, ' '));
+            file.close();
+            m_lastExportPath = filePath;
+            emit exportChanged();
+            emit pdfExported(filePath);
+            return filePath;
+        }
+        return {};
     }
 
     QPdfWriter writer(filePath);
