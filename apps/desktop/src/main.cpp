@@ -6,12 +6,17 @@
 #include <QQuickStyle>
 #include <memory>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "core/AppConfig.hpp"
 #include "core/Constants.hpp"
 #include "network/ApiClient.hpp"
 #include "services/AdminService.hpp"
 #include "services/AuthService.hpp"
 #include "services/AvatarWebViewHost.hpp"
+#include "services/DemoPreparationService.hpp"
 #include "services/InterviewService.hpp"
 #include "services/MicrophoneService.hpp"
 #include "services/QtKeychainSecureStorage.hpp"
@@ -23,6 +28,7 @@
 #include "viewmodels/DashboardViewModel.hpp"
 #include "viewmodels/FormValidator.hpp"
 #include "viewmodels/NavigationViewModel.hpp"
+#include "viewmodels/PreparationViewModel.hpp"
 #include "viewmodels/ReportViewModel.hpp"
 #include "viewmodels/SettingsViewModel.hpp"
 #include "viewmodels/SetupViewModel.hpp"
@@ -30,6 +36,18 @@
 
 int main(int argc, char *argv[]) {
   using namespace devdialogue;
+
+#ifdef _WIN32
+  // Ensure plugins loaded from subdirectories (e.g. qml/, platforms/) can find
+  // Qt and runtime DLLs in the application directory.
+  wchar_t appPath[MAX_PATH];
+  if (GetModuleFileNameW(nullptr, appPath, MAX_PATH) > 0) {
+    if (auto *lastSlash = wcsrchr(appPath, L'\\')) {
+      *lastSlash = L'\0';
+      SetDllDirectoryW(appPath);
+    }
+  }
+#endif
 
   QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
       Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
@@ -84,6 +102,10 @@ int main(int argc, char *argv[]) {
       std::make_unique<viewmodels::ReportViewModel>(interviewService);
   auto adminVM =
       std::make_unique<viewmodels::AdminViewModel>(adminService, authService);
+  auto preparationService =
+      std::make_shared<services::DemoPreparationService>();
+  auto preparationVM = std::make_unique<viewmodels::PreparationViewModel>(
+      preparationService, navVM.get());
   auto systemMonitorVM =
       std::make_unique<viewmodels::SystemMonitorViewModel>();
   QObject::connect(settingsVM.get(),
@@ -157,6 +179,8 @@ int main(int argc, char *argv[]) {
                    });
 
   QQmlApplicationEngine engine;
+  engine.addImportPath(app.applicationDirPath() + QStringLiteral("/qml"));
+  engine.addImportPath(app.applicationDirPath());
   engine.addImageProvider(
       QStringLiteral("webcam"),
       new services::WebcamImageProvider(webcamService->frameBuffer()));
@@ -172,6 +196,7 @@ int main(int argc, char *argv[]) {
   rootContext->setContextProperty("chatVM", chatVM.get());
   rootContext->setContextProperty("reportVM", reportVM.get());
   rootContext->setContextProperty("adminVM", adminVM.get());
+  rootContext->setContextProperty("preparationVM", preparationVM.get());
   rootContext->setContextProperty("systemMonitorVM", systemMonitorVM.get());
   rootContext->setContextProperty("apiClient", apiClient.get());
   rootContext->setContextProperty("avatarHost", avatarHost.get());

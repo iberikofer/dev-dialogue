@@ -17,7 +17,8 @@ An interactive technical, behavioral, and language interview simulation platform
 | :------------------- | :--------------------------------------- | :------------------------------------------------------------------------------ |
 | **Monorepo**         | **Turborepo** + **pnpm v12**             | Fast caching, script orchestration, and workspace isolation                     |
 | **Frontend**         | **Next.js 14** (App Router) + TypeScript | Responsive UI, interactive chat room, scorecard dashboard                       |
-| **Design System**    | **Tailwind CSS** + **Geist Font**        | High-craft UI based on David Sanders Taste & Anthropic Frontend standards       |
+| **Desktop Client**   | **Qt 6 (QML)** + **C++20**               | Native high-performance client, offline AI engine, 3D avatar, DirectShow webcam  |
+| **Design System**    | **Tailwind CSS** / **Geist Design**      | High-craft UI based on David Sanders Taste & Anthropic Frontend standards       |
 | **State Management** | **Zustand**                              | Session persistence, client tokens, and instantaneous Admin/User mode toggle    |
 | **Backend**          | **ASP.NET Core (.NET 9)** + C#           | High-performance REST API, session state machine, rate limits, security         |
 | **Database & Auth**  | **Supabase** (PostgreSQL 16 + JWT)       | Relational storage for users, question banks, and JSONB transcripts             |
@@ -37,12 +38,17 @@ dev-dialogue/
 │   │   ├── src/components/     # UI components (Navbar, ChatRoom, PerformanceReport, etc.)
 │   │   ├── src/lib/            # Typed API client, Supabase client, utilities
 │   │   └── src/store/          # Zustand auth & dynamic view-mode store
-│   └── api/                    # ASP.NET Core Web API
-│       ├── Controllers/        # Auth, Interviews, AdminQuestions, Health
-│       ├── Data/               # AppDbContext (PostgreSQL / In-Memory fallback)
-│       ├── Models/             # Entities (User, Interview, QuestionBank) & DTOs
-│       ├── Security/           # JWT validation & [RequireRole("admin")] attribute
-│       └── Services/AI/        # IAiService (MockAiService + CloudAiService)
+│   ├── api/                    # ASP.NET Core Web API
+│   │   ├── Controllers/        # Auth, Interviews, AdminQuestions, Health
+│   │   ├── Data/               # AppDbContext (PostgreSQL / In-Memory fallback)
+│   │   ├── Models/             # Entities (User, Interview, QuestionBank) & DTOs
+│   │   ├── Security/           # JWT validation & [RequireRole("admin")] attribute
+│   │   └── Services/AI/        # IAiService (MockAiService + CloudAiService)
+│   └── desktop/                # Native Qt 6 / C++20 desktop client (Offline & i18n)
+│       ├── include/            # Models, Services, ViewModels
+│       ├── src/                # Implementation files
+│       ├── qml/                # Views, Styles, Components (Geist UI)
+│       └── tests/              # GoogleTest & Qt Test suite
 │
 ├── packages/
 │   └── api-contracts/          # Shared TypeScript interfaces & DTO contracts
@@ -53,6 +59,18 @@ dev-dialogue/
 ├── pnpm-workspace.yaml         # pnpm workspace definition
 └── package.json                # Monorepo scripts & dependencies
 ```
+
+---
+
+### 💻 Desktop Client & Windows Installer
+
+For desktop users, pre-built standalone Windows installers are distributed directly via **GitHub Releases** and **Pull Request Artifacts** — **no terminal commands, SDKs, or manual building required**:
+
+- **Latest Windows Installer:** [Download `DevDialogue-Setup-x64.exe`](https://github.com/iberikofer/dev-dialogue/releases/latest)
+- **Online Bootstrapper (2 MB):** [Download `DevDialogue-Bootstrap-x64.exe`](https://github.com/iberikofer/dev-dialogue/releases/latest)
+- **Pull Request Builds:** Download the ready-to-test installer artifact directly from the **Summary → Artifacts** tab of any Pull Request.
+
+Simply double-click the `.exe` installer. It sets up shortcuts in the Start Menu and Desktop, bundled with the Qt 6 runtime, DirectShow webcam, Speech-to-Text, and the **Interview Preparation** («Підготовка до співбесід») module.
 
 ---
 
@@ -143,7 +161,8 @@ The AI subsystem is engineered for zero-dependency offline prototyping and seaml
 | :------------------- | :------------------------------------------- | :-------------------------------------------------------------------- |
 | **Монорепозиторій**  | **Turborepo** + **pnpm v12**                 | Кешування, оркестрація збірок, лінтингу та воркспейсів                |
 | **Frontend**         | **Next.js 14** (App Router) + TypeScript     | Користувацький інтерфейс, інтерактивний чат, дашборд                  |
-| **Дизайн-система**   | **Tailwind CSS** + **Шрифт Geist**           | High-craft дизайн на базі стандартів David Sanders Taste та Anthropic |
+| **Десктоп-клієнт**   | **Qt 6 (QML)** + **C++20**                   | Нативний застосунок, офлайн AI-рушій, 3D-аватар, DirectShow веб-камера |
+| **Дизайн-система**   | **Tailwind CSS** / **Geist Design**          | High-craft дизайн на базі стандартів David Sanders Taste та Anthropic |
 | **State Management** | **Zustand**                                  | Стан сесії, збереження токенів, миттєвий перемикач режимів адміна     |
 | **Backend**          | **ASP.NET Core (.NET 9)** + C#               | REST API, життєвий цикл сесій, ліміти, рольова безпека                |
 | **Database & Auth**  | **Supabase** (PostgreSQL 16 + JWT)           | Збереження користувачів, банку питань, транскриптів (JSONB)           |
@@ -163,12 +182,17 @@ dev-dialogue/
 │   │   ├── src/components/     # UI компоненти (Navbar, ChatRoom, PerformanceReport, тощо)
 │   │   ├── src/lib/            # Typed API client, Supabase клієнт, утиліти
 │   │   └── src/store/          # Zustand auth & view-mode store
-│   └── api/                    # ASP.NET Core Web API
-│       ├── Controllers/        # Auth, Interviews, AdminQuestions, Health
-│       ├── Data/               # AppDbContext (PostgreSQL / In-Memory fallback)
-│       ├── Models/             # Entities (User, Interview, QuestionBank) & DTOs
-│       ├── Security/           # JWT валідація, [RequireRole("admin")] атрибут
-│       └── Services/AI/        # IAiService (MockAiService + CloudAiService)
+│   ├── api/                    # ASP.NET Core Web API
+│   │   ├── Controllers/        # Auth, Interviews, AdminQuestions, Health
+│   │   ├── Data/               # AppDbContext (PostgreSQL / In-Memory fallback)
+│   │   ├── Models/             # Entities (User, Interview, QuestionBank) & DTOs
+│   │   ├── Security/           # JWT валідація, [RequireRole("admin")] атрибут
+│   │   └── Services/AI/        # IAiService (MockAiService + CloudAiService)
+│   └── desktop/                # Нативний клієнт Qt 6 / C++20 (Офлайн та i18n)
+│       ├── include/            # Моделі, сервіси, ViewModels
+│       ├── src/                # C++ реалізація
+│       ├── qml/                # Екрани, стилі, компоненти (Geist UI)
+│       └── tests/              # Набір тестів GoogleTest та Qt Test
 │
 ├── packages/
 │   └── api-contracts/          # Спільні TypeScript типи та DTO контракти
@@ -179,6 +203,18 @@ dev-dialogue/
 ├── pnpm-workspace.yaml         # Конфігурація воркспейсів
 └── package.json                # Кореневий файл з командами
 ```
+
+---
+
+### 💻 Десктопний клієнт та Windows-інсталятор
+
+Для користувачів десктопної версії готові інсталятори поширюються автоматично через **GitHub Releases** та артефакти **Pull Request** — **без потреби виконувати будь-які команди в терміналі чи встановлювати SDK**:
+
+- **Останній Windows-інсталятор:** [Завантажити `DevDialogue-Setup-x64.exe`](https://github.com/iberikofer/dev-dialogue/releases/latest)
+- **Легкий онлайн-завантажувач (2 МБ):** [Завантажити `DevDialogue-Bootstrap-x64.exe`](https://github.com/iberikofer/dev-dialogue/releases/latest)
+- **Збірки з Pull Request:** Завантажуйте готовий для тестування інсталятор прямо із вкладки **Summary → Artifacts** на сторінці будь-якого Pull Request.
+
+Просто двічі клікніть по завантаженому файлу `.exe` інсталятора. Він автоматично створить ярлики в меню «Пуск» та на робочому столі, встановить середовище Qt 6, DirectShow веб-камеру, Speech-to-Text та новий модуль **«Підготовка до співбесід»**.
 
 ---
 

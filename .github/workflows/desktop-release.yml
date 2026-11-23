@@ -3,6 +3,8 @@ name: Desktop Installer Release (main)
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -49,7 +51,18 @@ jobs:
           $ver = "1.0.$env:GITHUB_RUN_NUMBER"
           & .\scripts\package-desktop.ps1 -Configuration Release -AppVersion $ver -ReleaseTag latest
 
+      - name: Upload Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevDialogue-Setup-x64
+          path: |
+            dist/DevDialogue-Setup-*.exe
+            dist/DevDialogue-Bootstrap-*-x64.exe
+            dist/latest.json
+          if-no-files-found: error
+
       - name: Publish Release to GitHub Releases (tag: latest)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest

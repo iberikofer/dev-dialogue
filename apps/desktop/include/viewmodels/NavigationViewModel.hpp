@@ -19,7 +19,8 @@ public:
     Setup = 2,
     ChatRoom = 3,
     Report = 4,
-    Admin = 5
+    Admin = 5,
+    Preparation = 6
   };
   Q_ENUM(ViewIndex)
 
@@ -36,6 +37,7 @@ public:
   Q_INVOKABLE void navigateToChat(const QString &interviewId);
   Q_INVOKABLE void navigateToReport(const QString &interviewId);
   Q_INVOKABLE void navigateToAdmin();
+  Q_INVOKABLE void navigateToPreparation();
 
 signals:
   void currentViewIndexChanged(int newIndex);

@@ -57,6 +57,7 @@ Rectangle {
         switch (current) {
         case "home": return homeItem
         case "setup": return setupItem
+        case "preparation": return preparationItem
         case "session": return sessionItem.visible ? sessionItem : null
         case "admin": return adminItem.visible ? adminItem : null
         case "account": return accountItem
@@ -137,6 +138,16 @@ Rectangle {
             shortcutHint: "Ctrl+N"
             active: sidebar.current === "setup"
             onClicked: sidebar.navigate("setup")
+        }
+        SidebarItem {
+            id: preparationItem
+            Layout.fillWidth: true
+            expanded: sidebar.expanded
+            text: qsTr("Preparation")
+            iconName: "book-open"
+            shortcutHint: "Ctrl+P"
+            active: sidebar.current === "preparation"
+            onClicked: sidebar.navigate("preparation")
         }
         SidebarItem {
             id: sessionItem
