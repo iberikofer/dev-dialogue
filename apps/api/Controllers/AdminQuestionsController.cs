@@ -55,7 +55,8 @@ public class AdminQuestionsController : ControllerBase
                 q.QuestionText,
                 q.IsActive,
                 q.CreatedBy,
-                q.CreatedAt
+                q.CreatedAt,
+                q.ExpectedAnswer
             ))
             .ToPagedAsync(page, pageSize);
 
@@ -90,6 +91,7 @@ public class AdminQuestionsController : ControllerBase
             Level = dto.Level.ToLowerInvariant(),
             Topic = dto.Topic,
             QuestionText = dto.QuestionText,
+            ExpectedAnswer = dto.ExpectedAnswer,
             IsActive = true,
             CreatedBy = userId,
             CreatedAt = DateTime.UtcNow
@@ -107,7 +109,8 @@ public class AdminQuestionsController : ControllerBase
             item.QuestionText,
             item.IsActive,
             item.CreatedBy,
-            item.CreatedAt
+            item.CreatedAt,
+            item.ExpectedAnswer
         ));
     }
 
@@ -122,6 +125,7 @@ public class AdminQuestionsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(dto.Level)) item.Level = dto.Level;
         if (!string.IsNullOrWhiteSpace(dto.Topic)) item.Topic = dto.Topic;
         if (!string.IsNullOrWhiteSpace(dto.QuestionText)) item.QuestionText = dto.QuestionText;
+        if (dto.ExpectedAnswer != null) item.ExpectedAnswer = dto.ExpectedAnswer;
         if (dto.IsActive.HasValue) item.IsActive = dto.IsActive.Value;
 
         await _context.SaveChangesAsync();
@@ -135,7 +139,8 @@ public class AdminQuestionsController : ControllerBase
             item.QuestionText,
             item.IsActive,
             item.CreatedBy,
-            item.CreatedAt
+            item.CreatedAt,
+            item.ExpectedAnswer
         ));
     }
 

@@ -10,7 +10,8 @@
     "free": "powershell -Command \"try { Get-NetTCPConnection -LocalPort 3000,5238 -ErrorAction Stop | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
     "desktop:configure": "cmake -B apps/desktop/build -S apps/desktop",
     "desktop:build": "cmake --build apps/desktop/build --config Release",
-    "desktop:run": "powershell -Command \"Start-Process apps/desktop/build/Release/DevDialogue.exe\"",
+    "desktop:run": "powershell -Command \"Start-Process apps/desktop/build/DevDialogue.exe\"",
+    "desktop:package": "powershell -ExecutionPolicy Bypass -File scripts/package-desktop.ps1",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "devDependencies": {

@@ -253,6 +253,9 @@ AppPage {
                         if (row.isCompleted) {
                             navVM.navigateToReport(row.interviewId)
                         } else {
+                            backendVM.ensureAllServicesRunning()
+                            if (!avatarHost.ready)
+                                avatarHost.reload()
                             chatVM.openSession(row.interviewId)
                             navVM.navigateToChat(row.interviewId)
                         }

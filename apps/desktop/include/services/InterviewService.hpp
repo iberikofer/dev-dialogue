@@ -41,12 +41,15 @@ public:
     void sendMessage(
         const QString& id,
         const QString& content,
-        network::ApiCallback<models::SendMessageResponse> callback
+        network::ApiCallback<models::SendMessageResponse> callback,
+        const QString& action = QString(),
+        const std::optional<models::VisualContext>& visualContext = std::nullopt
     );
 
     void completeInterview(
         const QString& id,
-        network::ApiCallback<models::CompleteInterviewResponse> callback
+        network::ApiCallback<models::CompleteInterviewResponse> callback,
+        const std::optional<models::VisualAssessment>& visualAssessment = std::nullopt
     );
 
     void getStats(

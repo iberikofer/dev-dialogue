@@ -59,6 +59,7 @@ set(DESKTOP_UI_VIEWMODEL_SOURCES
     src/viewmodels/ReportViewModel.cpp
     src/viewmodels/SettingsViewModel.cpp
     src/viewmodels/SetupViewModel.cpp
+    src/viewmodels/SystemMonitorViewModel.cpp
 )
 set(DESKTOP_UI_VIEWMODEL_HEADERS
     include/viewmodels/AdminViewModel.hpp
@@ -73,6 +74,7 @@ set(DESKTOP_UI_VIEWMODEL_HEADERS
     include/viewmodels/ReportViewModel.hpp
     include/viewmodels/SettingsViewModel.hpp
     include/viewmodels/SetupViewModel.hpp
+    include/viewmodels/SystemMonitorViewModel.hpp
     include/viewmodels/ViewModelSupport.hpp
 )
 
@@ -94,16 +96,22 @@ add_executable(DevDialogue
 
     # Services & Secure Storage
     include/services/ISecureStorage.hpp
-    src/services/InMemorySecureStorage.cpp
     include/services/InMemorySecureStorage.hpp
-    src/services/QtKeychainSecureStorage.cpp
     include/services/QtKeychainSecureStorage.hpp
-    src/services/AuthService.cpp
     include/services/AuthService.hpp
-    src/services/InterviewService.cpp
     include/services/InterviewService.hpp
-    src/services/AdminService.cpp
     include/services/AdminService.hpp
+    include/services/AvatarWebViewHost.hpp
+    include/services/MicrophoneService.hpp
+    include/services/WebcamService.hpp
+    src/services/InMemorySecureStorage.cpp
+    src/services/QtKeychainSecureStorage.cpp
+    src/services/AuthService.cpp
+    src/services/InterviewService.cpp
+    src/services/AdminService.cpp
+    src/services/AvatarWebViewHost.cpp
+    src/services/MicrophoneService.cpp
+    src/services/WebcamService.cpp
     
     # ViewModels
     src/viewmodels/AuthViewModel.cpp
@@ -114,8 +122,14 @@ add_executable(DevDialogue
     ${DESKTOP_UI_VIEWMODEL_HEADERS}
 )
 
+# GUI subsystem: no console window behind the app window.
+if(WIN32)
+    set_target_properties(DevDialogue PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
 target_include_directories(DevDialogue PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/webview2/build/native/include
 )
 
 target_link_libraries(DevDialogue PRIVATE
@@ -138,8 +152,28 @@ elseif(TARGET Qt6Keychain::Qt6Keychain)
     target_compile_definitions(DevDialogue PRIVATE HAS_QTKEYCHAIN=1)
 endif()
 
+execute_process(
+    COMMAND git -C "${CMAKE_CURRENT_SOURCE_DIR}/../.." rev-parse --short HEAD
+    OUTPUT_VARIABLE DEVDIALOGUE_GIT_COMMIT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(NOT DEVDIALOGUE_GIT_COMMIT)
+    set(DEVDIALOGUE_GIT_COMMIT "dev")
+endif()
+target_compile_definitions(DevDialogue PRIVATE DEVDIALOGUE_GIT_COMMIT="${DEVDIALOGUE_GIT_COMMIT}")
+
 if(WIN32)
-    target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32)
+    target_link_libraries(DevDialogue PRIVATE Crypt32 Advapi32 ole32 oleaut32 mf mfplat mfreadwrite mfuuid strmiids winmm psapi)
+    set(WEBVIEW2_LOADER_DLL "${CMAKE_CURRENT_SOURCE_DIR}/third_party/webview2/build/native/x64/WebView2Loader.dll")
+    if(EXISTS "${WEBVIEW2_LOADER_DLL}")
+        add_custom_command(TARGET DevDialogue POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${WEBVIEW2_LOADER_DLL}"
+                "$<TARGET_FILE_DIR:DevDialogue>/WebView2Loader.dll"
+            COMMENT "Copying WebView2Loader.dll next to DevDialogue.exe..."
+        )
+    endif()
 endif()
 
 # Application icon shown by Explorer and the taskbar (resources/app).
@@ -184,9 +218,12 @@ qt_add_qml_module(DevDialogue
         qml/components/DarkCard.qml
         qml/components/DarkTextArea.qml
         qml/components/DarkTextField.qml
+        qml/components/DebugOverlay.qml
+        qml/components/DeviceSettingsOverlay.qml
         qml/components/GlowBlob.qml
         qml/components/Icon.qml
         qml/components/KpiTile.qml
+        qml/components/LocalModelOverlay.qml
         qml/components/MessageBubble.qml
         qml/components/ModalOverlay.qml
         qml/components/MonoText.qml
@@ -202,6 +239,7 @@ qt_add_qml_module(DevDialogue
         qml/components/SoftGlow.qml
         qml/components/Spinner.qml
         qml/components/SplashOverlay.qml
+        qml/components/SystemMonitorWindow.qml
         qml/components/TactileButton.qml
         qml/components/ThemedScrollBar.qml
         qml/components/Toast.qml
@@ -277,6 +315,7 @@ if(GTest_FOUND)
     target_link_libraries(DevDialogueTests PRIVATE
         GTest::gtest
         Qt6::Core
+        Qt6::Gui
         Qt6::Network
         nlohmann_json::nlohmann_json
     )
@@ -305,9 +344,17 @@ find_program(WINDEPLOYQT_EXECUTABLE windeployqt
 )
 
 if(WIN32 AND WINDEPLOYQT_EXECUTABLE AND CMAKE_BUILD_TYPE STREQUAL "Release")
+    # The MSYS2 Qt build keeps qmlimportscanner in share/qt6/bin, and
+    # windeployqt aborts (exit 1) when it cannot start it - which fails the
+    # build right after linking. Put the Qt bin and tools dirs on PATH.
+    get_filename_component(QT_BIN_DIR "${Qt6_DIR}/../../../bin" ABSOLUTE)
+    get_filename_component(QT_TOOLS_DIR "${Qt6_DIR}/../../../share/qt6/bin" ABSOLUTE)
     add_custom_command(TARGET DevDialogue POST_BUILD
-        COMMAND "${WINDEPLOYQT_EXECUTABLE}"
+        COMMAND "${CMAKE_COMMAND}" -E env
+            "PATH=${QT_BIN_DIR};${QT_TOOLS_DIR};$ENV{PATH}"
+            "${WINDEPLOYQT_EXECUTABLE}"
             --qmldir ${CMAKE_CURRENT_SOURCE_DIR}/qml
+            --no-translations
             $<TARGET_FILE:DevDialogue>
         COMMENT "Deploying Qt runtime libraries with windeployqt..."
     )

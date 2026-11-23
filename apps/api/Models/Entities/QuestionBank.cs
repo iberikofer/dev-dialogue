@@ -30,6 +30,9 @@ public class QuestionBank
     [Column("question_text")]
     public string QuestionText { get; set; } = string.Empty;
 
+    [Column("expected_answer")]
+    public string? ExpectedAnswer { get; set; }
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

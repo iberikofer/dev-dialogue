@@ -36,6 +36,8 @@ public:
     // Creates the interview and opens the chat room. If the backend is
     // unreachable a local demo session is started instead, like on the web.
     Q_INVOKABLE void start();
+    void setLocalModelReadyProbe(std::function<bool()> probe);
+    void setEnsureServicesProbe(std::function<void()> probe) { m_ensureServicesProbe = std::move(probe); }
 
 signals:
     void directionChanged();
@@ -43,6 +45,7 @@ signals:
     void languageChanged();
     void busyChanged();
     void errorMessageChanged();
+    void localModelRequired();
     // Emitted right before navigating to the chat room. `firstQuestion` is
     // empty and `offline` is true for a local demo session.
     void interviewStarted(const QString& interviewId, const QString& direction, const QString& level,
@@ -55,6 +58,8 @@ private:
 
     std::shared_ptr<services::InterviewService> m_interviewService;
     NavigationViewModel* m_navigation;
+    std::function<bool()> m_localModelReadyProbe;
+    std::function<void()> m_ensureServicesProbe;
     QString m_direction{QStringLiteral("frontend")};
     QString m_level{QStringLiteral("junior")};
     QString m_language{QStringLiteral("uk")};

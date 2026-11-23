@@ -45,12 +45,31 @@ if (!string.IsNullOrWhiteSpace(renderPort))
     builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
 }
 
-// Database Configuration (PostgreSQL with in-memory fallback)
+// Database Configuration (PostgreSQL with in-memory fallback, plus runtime encrypted SQLite switch)
+SqliteMirrorExtensions.EnsureSqlCipherInitialized();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                     ?? Environment.GetEnvironmentVariable("CONNECTION_STRING");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+var sqliteFilePath = SqliteMirrorExtensions.GetSqliteCopyPath(builder.Environment.ContentRootPath);
+var initialSqliteConn = SqliteMirrorExtensions.BuildEncryptedSqliteConnectionString(
+    builder.Configuration,
+    builder.Environment.ContentRootPath,
+    connectionString);
+
+builder.Services.AddSingleton(new DatabaseModeState(
+    SqliteMirrorExtensions.ShouldUseSqlite(builder.Configuration, connectionString),
+    sqliteFilePath,
+    initialSqliteConn));
+
+builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
+    var modeState = sp.GetRequiredService<DatabaseModeState>();
+    if (modeState.UseSqlite)
+    {
+        options.UseSqlite(modeState.SqliteConnectionString);
+        return;
+    }
+
     var isPostgresConfigured = !string.IsNullOrWhiteSpace(connectionString)
                             && (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase)
                              || connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase));
@@ -65,13 +84,22 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     }
 });
 
-// AI Service Registration (Cloud or Mock)
+// AI Service Registration (Cloud, Local Ollama, or Mock)
+builder.Services.AddSingleton<LocalModelManager>();
+builder.Services.AddSingleton<AvatarSpeechService>();
+builder.Services.AddSingleton<ParakeetSpeechToTextService>();
+builder.Services.AddSingleton<VisualSessionAggregator>();
+builder.Services.AddHttpClient<LocalVisionService>();
 var aiProvider = builder.Configuration["AI:Provider"] ?? "Mock";
 var aiApiKey = builder.Configuration["AI:ApiKey"] ?? Environment.GetEnvironmentVariable("AI_API_KEY");
 
 if (string.Equals(aiProvider, "Cloud", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(aiApiKey))
 {
     builder.Services.AddHttpClient<IAiService, CloudAiService>();
+}
+else if (string.Equals(aiProvider, "Ollama", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddHttpClient<IAiService, OllamaAiService>();
 }
 else
 {
@@ -262,53 +290,69 @@ if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("Swa
 
 app.UseCors("AllowFrontend");
 
+// Serve embedded 3D Avatar assets from "3D Face Import/" at /avatar when present
+var avatarRoot = app.Services.GetRequiredService<AvatarSpeechService>().AvatarRootPath;
+if (!string.IsNullOrEmpty(avatarRoot) && Directory.Exists(avatarRoot))
+{
+    var avatarMimeTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+    avatarMimeTypes.Mappings[".glb"] = "model/gltf-binary";
+    avatarMimeTypes.Mappings[".gltf"] = "model/gltf+json";
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(avatarRoot),
+        RequestPath = "/avatar",
+        ContentTypeProvider = avatarMimeTypes,
+        ServeUnknownFileTypes = false
+    });
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapSqliteCopyEndpoints();
 
 // Seed Initial Data (if QuestionBank is empty)
 using (var scope = app.Services.CreateScope())
 {
+    var modeState = scope.ServiceProvider.GetRequiredService<DatabaseModeState>();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (!db.QuestionsBank.Any())
+    if (modeState.UseSqlite)
     {
-        db.QuestionsBank.AddRange(
-            new QuestionBank
-            {
-                Direction = "frontend",
-                Level = "junior",
-                Stage = "hard_skills",
-                Topic = "React Components & State",
-                QuestionText = "Поясніть різницю між controlled та uncontrolled компонентами у формах."
-            },
-            new QuestionBank
-            {
-                Direction = "backend",
-                Level = "junior",
-                Stage = "hard_skills",
-                Topic = "Networking & Protocols",
-                QuestionText = "Поясніть різницю між TCP та UDP. У яких сценаріях UDP є кращим вибором?"
-            },
-            new QuestionBank
-            {
-                Direction = "backend",
-                Level = "junior",
-                Stage = "hard_skills",
-                Topic = "Databases & Indexing",
-                QuestionText = "Як працюють індекси в базах даних (зокрема B-Tree) та коли індекс може нашкодити продуктивності?"
-            },
-            new QuestionBank
-            {
-                Direction = "devops",
-                Level = "junior",
-                Stage = "hard_skills",
-                Topic = "Docker Fundamentals",
-                QuestionText = "Поясніть різницю між Docker контейнером та віртуальною машиною."
-            }
-        );
-        db.SaveChanges();
+        await db.Database.EnsureCreatedAsync();
+        await SqliteMirrorExtensions.EnsureSqliteSchemaUpgradedAsync(db);
+        app.Logger.LogInformation("Database mode: Encrypted SQLite ({SqliteFile})", modeState.SqliteFilePath);
     }
+
+    var existingQuestions = await db.QuestionsBank.ToListAsync();
+    var existingTexts = existingQuestions
+        .Select(q => q.QuestionText)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    var seedPool = DevDialogue.Api.Services.AI.QuestionBankSelector.BuildDefaultSeedQuestions();
+    var addedAny = false;
+    foreach (var seed in seedPool)
+    {
+        var match = existingQuestions.FirstOrDefault(q =>
+            string.Equals(q.QuestionText, seed.QuestionText, StringComparison.OrdinalIgnoreCase));
+        if (match == null)
+        {
+            db.QuestionsBank.Add(seed);
+            addedAny = true;
+        }
+        else if (string.IsNullOrWhiteSpace(match.ExpectedAnswer))
+        {
+            match.ExpectedAnswer = seed.ExpectedAnswer;
+            addedAny = true;
+        }
+    }
+
+    if (addedAny)
+    {
+        await db.SaveChangesAsync();
+    }
+
+    await SqliteMirrorExtensions.SyncSqliteCopyAsync(db, modeState.SqliteConnectionString, modeState.SqliteFilePath);
 }
 
 app.Run();

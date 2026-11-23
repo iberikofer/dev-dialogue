@@ -19,6 +19,8 @@ Item {
     property color dialogBorder: Theme.borderStrong
     property real backdropOpacity: 0.8
     property bool closeOnBackdrop: true
+    property bool dockRight: false
+    property int dockRightMargin: 16
     // Height available to the dialog body (the card is capped at 90% of the window).
     readonly property real maxBodyHeight: Math.max(120, height * 0.9 - dialogPadding * 2)
     signal closeRequested()
@@ -66,8 +68,10 @@ Item {
     Rectangle {
         id: card
         width: Math.min(overlay.dialogWidth, overlay.width - 32)
-        height: cardBody.implicitHeight + overlay.dialogPadding * 2
-        anchors.horizontalCenter: parent.horizontalCenter
+        height: Math.min(cardBody.implicitHeight + overlay.dialogPadding * 2, overlay.height - 32)
+        x: overlay.dockRight
+            ? Math.max(16, overlay.width - width - overlay.dockRightMargin)
+            : (overlay.width - width) / 2
         y: (overlay.height - height) / 2 + entranceOffset
         property real entranceOffset: 0
         radius: overlay.dialogRadius

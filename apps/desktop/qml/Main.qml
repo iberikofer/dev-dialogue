@@ -22,6 +22,43 @@ ApplicationWindow {
     // The account page is not part of NavigationViewModel; it is a local
     // overlay page that closes whenever the view model navigates.
     property bool accountOpen: false
+    property bool debugOpen: false
+    property bool localModelWarningOpen: false
+    property bool localModelWarningDismissed: false
+    property bool updateToastShown: false
+    readonly property bool hideSidebarForChat: authVM.isAuthenticated
+        && pageIndex === 3
+        && chatRoomView.chatOpen
+        && !accountOpen
+    readonly property bool avatarSurfaceActive: authVM.isAuthenticated
+        && pageIndex === 3
+        && !localModelWarningOpen
+        && (!backendVM.isOffline || avatarHost.ready)
+
+    function toggleDebug() {
+        debugOpen = !debugOpen
+    }
+
+    function openServicesManager() {
+        backendVM.checkAllServices()
+        localModelWarningDismissed = false
+        localModelWarningOpen = true
+    }
+
+    function syncAvatarPreferences() {
+        avatarHost.setVolume(chatVM.avatarVolume)
+        avatarHost.setMuted(chatVM.avatarMuted)
+        avatarHost.setOutputMode(chatVM.avatarOutputMode)
+        avatarHost.setSoundEffect(chatVM.avatarSoundEffect)
+        avatarHost.setVoice(chatVM.avatarVoice)
+        avatarHost.setGender(chatVM.avatarGender)
+        avatarHost.setPreset(chatVM.avatarPreset)
+        avatarHost.setAccessory("Hat", chatVM.hatVisible)
+        avatarHost.setAccessory("Glasses", chatVM.glassesVisible)
+        avatarHost.setAccessory("Tie", chatVM.tieVisible)
+        avatarHost.setAccessory("Horns", chatVM.hornsVisible)
+        avatarHost.setAccessory("Halo", chatVM.haloVisible)
+    }
 
     // Stack index per NavigationViewModel::ViewIndex. Landing (0) has no
     // screen in the app and shows Home.
@@ -46,8 +83,12 @@ ApplicationWindow {
         case "home": navVM.navigateToDashboard(); break
         case "setup": navVM.navigateToSetup(); break
         case "session":
-            if (chatVM.hasActiveSession)
+            if (chatVM.hasActiveSession) {
+                backendVM.ensureAllServicesRunning()
+                if (!avatarHost.ready)
+                    avatarHost.reload()
                 navVM.navigateToChat(chatVM.interviewId)
+            }
             break
         case "admin":
             if (authVM.isAdmin && authVM.isAdminViewActive)
@@ -72,9 +113,12 @@ ApplicationWindow {
         function onAuthStateChanged() {
             if (!authVM.isAuthenticated) {
                 rootWindow.accountOpen = false
+                rootWindow.localModelWarningOpen = false
                 navVM.navigateToDashboard()
-            } else if (!authVM.isAdmin && navVM.currentViewIndex === 5) {
-                navVM.navigateToDashboard()
+            } else {
+                if (!authVM.isAdmin && navVM.currentViewIndex === 5)
+                    navVM.navigateToDashboard()
+                backendVM.refreshLocalModelStatus()
             }
         }
         function onErrorOccurred(error) {
@@ -98,6 +142,104 @@ ApplicationWindow {
     Component.onCompleted: {
         if (navVM.currentViewIndex === 0)
             navVM.navigateToDashboard()
+        backendVM.ensureAllServicesRunning()
+        backendVM.checkForUpdates(true)
+        avatarHost.attachToWindow(rootWindow, "")
+    }
+
+    Connections {
+        target: avatarHost
+        function onReadyChanged() {
+            if (avatarHost.ready)
+                rootWindow.syncAvatarPreferences()
+        }
+    }
+
+    Connections {
+        target: chatVM
+        function onAvatarSpeakRequested(text, emotion, actionsSequence, uiCommands) {
+            avatarHost.speak(text, emotion, actionsSequence, uiCommands, chatVM.avatarVoice, chatVM.avatarGender)
+        }
+        function onAvatarReactRequested(emotion, actionsSequence, uiCommands) {
+            avatarHost.react(emotion, actionsSequence, uiCommands, chatVM.avatarGender)
+        }
+        function onAvatarSpeechStopRequested() {
+            avatarHost.stopSpeech()
+        }
+        function onAvatarVolumeChanged() { avatarHost.setVolume(chatVM.avatarVolume) }
+        function onAvatarMutedChanged() { avatarHost.setMuted(chatVM.avatarMuted) }
+        function onAvatarOutputModeChanged() { avatarHost.setOutputMode(chatVM.avatarOutputMode) }
+        function onAvatarSoundEffectChanged() { avatarHost.setSoundEffect(chatVM.avatarSoundEffect) }
+        function onAvatarVoiceChanged() { avatarHost.setVoice(chatVM.avatarVoice) }
+        function onAvatarGenderChanged() { avatarHost.setGender(chatVM.avatarGender) }
+        function onAvatarPresetChanged() { avatarHost.setPreset(chatVM.avatarPreset) }
+        function onAvatarWardrobeChanged() {
+            avatarHost.setAccessory("Hat", chatVM.hatVisible)
+            avatarHost.setAccessory("Glasses", chatVM.glassesVisible)
+            avatarHost.setAccessory("Tie", chatVM.tieVisible)
+            avatarHost.setAccessory("Horns", chatVM.hornsVisible)
+            avatarHost.setAccessory("Halo", chatVM.haloVisible)
+        }
+    }
+
+    Connections {
+        target: backendVM
+        function onStatusChanged() {
+            if (!backendVM.isOffline) {
+                backendVM.refreshLocalModelStatus()
+                if (!avatarHost.ready)
+                    avatarHost.reload()
+            }
+        }
+        function onAvatarReloadRequested() {
+            avatarHost.reload()
+        }
+        function onUpdateStateChanged() {
+            if (backendVM.updateAvailable && !rootWindow.updateToastShown && !backendVM.isUpdating) {
+                rootWindow.updateToastShown = true
+                toast.show(
+                    qsTr("Вийшла нова версія %1 (%2) — потрібно оновитись").arg(backendVM.latestVersion).arg(backendVM.latestCommit),
+                    "info",
+                    qsTr("Оновити"),
+                    () => backendVM.installUpdate()
+                )
+            }
+        }
+        function onLocalModelChanged() {
+            if (backendVM.localModelReady && backendVM.ollamaRunning && !backendVM.isOffline) {
+                // Keep manual dialog open if user opened it explicitly, only auto-clear warning flag
+                rootWindow.localModelWarningDismissed = false
+            } else if (authVM.isAuthenticated && backendVM.localModelChecked && !backendVM.localModelReady && !rootWindow.localModelWarningDismissed) {
+                rootWindow.localModelWarningOpen = true
+            }
+        }
+    }
+
+    Connections {
+        target: setupVM
+        function onLocalModelRequired() {
+            rootWindow.localModelWarningDismissed = false
+            rootWindow.localModelWarningOpen = true
+        }
+    }
+
+    Connections {
+        target: chatVM
+        function onLocalModelRequired() {
+            rootWindow.localModelWarningDismissed = false
+            rootWindow.localModelWarningOpen = true
+        }
+    }
+
+    Connections {
+        target: reportVM
+        function onPdfExported(filePath) {
+            toast.show(qsTr("PDF report saved: %1").arg(filePath), "success", qsTr("Open"),
+                       () => reportVM.openLastPdf())
+        }
+        function onPdfExportFailed(error) {
+            toast.show(error, "error")
+        }
     }
 
     // ---------------------------------------------------------- Shortcuts
@@ -126,6 +268,16 @@ ApplicationWindow {
         enabled: authVM.isAuthenticated
         onActivated: sidebar.expanded = !sidebar.expanded
     }
+    Shortcut {
+        sequences: ["F12", "Ctrl+D"]
+        onActivated: rootWindow.toggleDebug()
+    }
+    Shortcut {
+        sequence: "Delete"
+        // Allow Delete to work normally when typing inside a text field or text area
+        enabled: !(rootWindow.activeFocusItem && (rootWindow.activeFocusItem.cursorVisible !== undefined))
+        onActivated: rootWindow.toggleDebug()
+    }
 
     // ---------------------------------------------------------- Backdrop
     GlowBlob {
@@ -146,17 +298,19 @@ ApplicationWindow {
 
         Sidebar {
             id: sidebar
+            visible: !rootWindow.hideSidebarForChat
             anchors.left: parent.left
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             current: rootWindow.sidebarSection
             onNavigate: (target) => rootWindow.go(target)
+            onOpenServicesRequested: rootWindow.openServicesManager()
         }
 
         Rectangle {
             id: contentPanel
-            anchors.left: sidebar.right
-            anchors.leftMargin: Theme.windowGap
+            anchors.left: rootWindow.hideSidebarForChat ? shell.left : sidebar.right
+            anchors.leftMargin: rootWindow.hideSidebarForChat ? 0 : Theme.windowGap
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.bottom: parent.bottom
@@ -175,7 +329,12 @@ ApplicationWindow {
                 Item {}              // 0: Landing, not used in the app
                 DashboardView {}     // 1
                 SetupView {}         // 2
-                ChatRoomView {}      // 3
+                ChatRoomView {
+                    id: chatRoomView
+                    avatarAllowed: rootWindow.avatarSurfaceActive
+                    sidebarExpanded: sidebar.expanded
+                    onDebugRequested: rootWindow.toggleDebug()
+                }      // 3
                 ReportView {}        // 4
                 AdminView {}         // 5
                 AccountView {}       // 6: local page, see accountOpen
@@ -228,7 +387,23 @@ ApplicationWindow {
         onTriggered: rootWindow.close()
     }
 
+    LocalModelOverlay {
+        open: rootWindow.localModelWarningOpen
+        onCloseRequested: {
+            rootWindow.localModelWarningDismissed = true
+            rootWindow.localModelWarningOpen = false
+        }
+    }
+
+    DebugOverlay {
+        open: rootWindow.debugOpen
+        dockRight: rootWindow.pageIndex === 3
+        onCloseRequested: rootWindow.debugOpen = false
+    }
+
     SplashOverlay {
         anchors.fill: parent
     }
+
+    SystemMonitorWindow {}
 }

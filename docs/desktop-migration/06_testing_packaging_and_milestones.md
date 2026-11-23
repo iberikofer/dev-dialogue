@@ -88,29 +88,41 @@ private slots:
 
 To produce an isolated, zero-dependency installer on Windows:
 
-1. **Deploy Qt Runtimes:**
+1. **Build and pack (one command):**
    ```powershell
-   windeployqt.exe --qmldir apps/desktop/qml --release --compiler-runtime apps/desktop/build/Release/DevDialogue.exe
+   pnpm desktop:package
    ```
-2. **Inno Setup Script (`installer.iss`):**
-   ```iss
-   [Setup]
-   AppName=Dev Dialogue
-   AppVersion=1.0.0
-   DefaultDirName={autopf}\DevDialogue
-   DefaultGroupName=Dev Dialogue
-   OutputDir=dist
-   OutputBaseFilename=DevDialogue-Setup-x64
-   Compression=lzma2/ultra64
-   SolidCompression=yes
+   `scripts/package-desktop.ps1` builds the Release binary, stages the Qt runtime
+   with `windeployqt` into `dist/stage`, and compiles the installer script.
+   Result: `dist/DevDialogue-Setup-<version>-x64.exe`.
 
-   [Files]
-   Source: "apps\desktop\build\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
-
-   [Icons]
-   Name: "{group}\Dev Dialogue"; Filename: "{app}\DevDialogue.exe"
-   Name: "{autodesktop}\Dev Dialogue"; Filename: "{app}\DevDialogue.exe"
+2. **Deploy Qt Runtimes:**
+   ```powershell
+   windeployqt-qt6.exe --qmldir apps/desktop/qml --no-translations apps/desktop/build/DevDialogue.exe
    ```
+   Note: the MSYS2 Qt build keeps `qmlimportscanner` in `share/qt6/bin`; without it
+   on `PATH`, `windeployqt` fails and breaks the build right after linking.
+
+3. **Inno Setup Script (`installer/dev-dialogue.iss`):** destination folder can be
+   chosen by the user, per-user install by default (no admin rights), Start Menu
+   and optional desktop shortcut, uninstaller entry in *Apps & features*.
+   The app's own QML module (`DevDialogue/App`) must be installed next to the
+   executable - the QML engine resolves `import DevDialogue.App` from disk.
+
+4. **Bootstrapper (`installer/dev-dialogue-bootstrap.iss`):** a 2 MB installer that
+   does not contain the application. It downloads the full installer
+   (`Flags: external download`, SHA-256 pinned via `Hash:`), verifies it and
+   runs it. The payload location is derived from the git remote and the version,
+   or passed explicitly:
+
+   ```powershell
+   pnpm desktop:package
+   pnpm desktop:package -- -PayloadUrl "https://example.com/DevDialogue-Setup-1.0.0-x64.exe"
+   ```
+
+   Switches for the real installer can be passed through with
+   `/payloadargs="/VERYSILENT /SUPPRESSMSGBOXES"` (Inno does not expose its own
+   switches to the script, only user defined ones).
 
 ---
 
